@@ -61,6 +61,6 @@ library Constants {
     string public constant NFT_NAME = "IP WORLD";
     string public constant NFT_SYMBOL = "IPWRLD";
     string public constant NFT_BASE_URI = "https://prod.api.ip.world/api/v1/ipas/metadata/";
-    string public constant NFT_CONTRACT_URI = "https://prod.ip.world/api/v1/ipas/metadata/contract";
+    string public constant NFT_CONTRACT_URI = "https://prod.api.ip.world/api/v1/ipas/metadata/contract";
 }
 
