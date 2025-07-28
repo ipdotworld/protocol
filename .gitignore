@@ -1,0 +1,52 @@
+# Common contract dependency and compiler folders
+cache/
+foundry_out/
+node_modules/
+out/
+broadcast/
+lib/
+
+# Docs
+docs/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDE and editor files
+.DS_Store
+.idea
+.vscode
+*.swp
+*.swo
+
+# Claude and Cursor related
+.claude/
+claude.json
+.cursor/
+cursor/
+CLAUDE.md
+.cursorignore
+
+# Build artifacts
+artifacts/
+typechain/
+typechain-types/
+
+# Coverage
+coverage/
+coverage.json
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+
+# Private keys and sensitive data
+*.pem
+*.key
+secrets/

@@ -1,0 +1,9 @@
+ds-test/=lib/forge-std/lib/ds-test/src
+forge-std/=lib/forge-std/src
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts
+@openzeppelin-upgradeable/contracts=lib/openzeppelin-contracts-upgradeable/contracts
+@uniswap/v3-core/=lib/v3-core
+@uniswap/v3-periphery/=lib/v3-periphery
+@storyprotocol/core/=lib/protocol-core-v1/contracts
+@storyprotocol/periphery/=lib/protocol-periphery-v1/contracts
+erc6551/=lib/erc6551/src/
