@@ -278,6 +278,34 @@ contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IER
         ipWorld.linkTokensToIp(ipaId, tokens);
     }
 
+    /// @notice Claims an existing IP asset and links tokens to it
+    /// @dev Requires IP asset owner to have approved this contract for license token minting
+    /// @param ipaId Address of the existing IP asset
+    /// @param claimer Address to claim the IP asset for
+    /// @param tokens Array of token addresses to link to the IP asset
+    function claimIp(address ipaId, address claimer, address[] calldata tokens) external {
+        if (ipaId == address(0) || claimer == address(0)) {
+            revert Errors.Operator_InvalidAddress();
+        }
+
+        // Mint 1 License Token - this will revert if IP asset doesn't exist,
+        // has no license terms, or if not approved
+        ILicensingModuleWithNFT(Constants.LICENSING_MODULE).mintLicenseTokens(
+            ipaId,
+            Constants.PILICENSE_TEMPLATE,
+            1, // Use license terms ID 1 (standard PIL terms)
+            1,
+            address(this),
+            "",
+            type(uint256).max,
+            type(uint32).max
+        );
+
+        // Link tokens to IP and claim
+        ipWorld.linkTokensToIp(ipaId, tokens);
+        ipWorld.claimIp(ipaId, claimer);
+    }
+
     function _checkSigner(bytes32 structHash, Signature memory sig) internal view {
         bytes32 _hash = _hashTypedDataV4(structHash);
         address signer = ECDSA.recover(_hash, sig.v, sig.r, sig.s);
