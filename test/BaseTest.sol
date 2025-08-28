@@ -76,7 +76,7 @@ contract BaseTest is Test {
             address(
                 new ERC1967Proxy(
                     address(new IPOwnerVault(expectedIpWorldAddress, vestingDuration)),
-                    abi.encodeWithSelector(IPOwnerVault.initialize.selector)
+                    abi.encodeWithSelector(IPOwnerVault.initialize.selector, address(this))
                 )
             )
         );
@@ -101,7 +101,7 @@ contract BaseTest is Test {
                             500 ether
                         )
                     ),
-                    abi.encodeWithSelector(IPWorld.initialize.selector)
+                    abi.encodeWithSelector(IPWorld.initialize.selector, address(this))
                 )
             )
         );
@@ -132,7 +132,12 @@ contract BaseTest is Test {
         );
 
         operator = new Operator(
-            address(weth), address(ipWorld), v3Deployer, address(spgNft), address(0), Constants.LICENSING_URL
+            address(weth),
+            address(ipWorld),
+            v3Deployer,
+            address(spgNft),
+            0x4027fc996DB0EaC23470e82c0Ce5D00fee42c26B,
+            Constants.LICENSING_URL
         );
 
         spgNft.grantRole(SPGNFTLib.MINTER_ROLE, address(operator));

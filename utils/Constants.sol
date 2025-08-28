@@ -16,6 +16,7 @@ library Constants {
     address public constant LICENSING_MODULE = 0x04fbd8a2e56dd85CFD5500A4A4DfA955B9f1dE6f;
     address public constant PILICENSE_TEMPLATE = 0x2E896b0b2Fdb7457499B56AAaA4AE55BCB4Cd316;
     address public constant ROYALTY_MODULE = 0xD2f60c40fEbccf6311f8B47c4f2Ec6b040400086;
+    address public constant ACCESS_CONTROLLER = 0xcCF37d0a503Ee1D4C11208672e622ed3DFB2275a;
     
     //https://github.com/0xstoryhunt/default-list/tree/main/src/constants
     // Mainnet addresses
