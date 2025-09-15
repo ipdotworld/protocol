@@ -41,6 +41,10 @@ interface IIPToken {
     /// @return Current lower tick position of the bid wall
     function bidWallTickLower() external view returns (int24);
 
+    /// @notice Duration of anti-snipe period in seconds (0 = no limit)
+    /// @return Duration of anti-snipe protection in seconds
+    function antiSnipeDuration() external view returns (uint256);
+
     /// @notice Repositions the bid wall based on current market conditions
     /// @dev This function collects existing liquidity, burns tokens, and creates new liquidity at appropriate tick range
     function repositionBidWall() external;

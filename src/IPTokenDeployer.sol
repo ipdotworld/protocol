@@ -36,11 +36,12 @@ contract IPTokenDeployer is IIPTokenDeployer {
         address v3Deployer,
         address weth,
         uint256 bidWallAmount,
+        uint256 antiSnipeDuration,
         string calldata name,
         string calldata symbol
     ) external onlyIPWorld returns (address token) {
         // Deploy the token - it will mint all tokens to this contract
-        token = address(new IPToken(tokenCreator, v3Deployer, weth, bidWallAmount, name, symbol));
+        token = address(new IPToken(tokenCreator, v3Deployer, weth, bidWallAmount, antiSnipeDuration, name, symbol));
 
         // Transfer all tokens to IPWorld
         uint256 balance = IERC20(token).balanceOf(address(this));
