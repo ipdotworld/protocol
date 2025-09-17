@@ -118,6 +118,10 @@ interface IIPWorld {
     /// @return Fixed amount of ETH used for each token's bid wall
     function bidWallAmount() external view returns (uint256);
 
+    /// @notice Duration of anti-snipe protection in seconds
+    /// @return Duration of anti-snipe period for newly created tokens
+    function ANTI_SNIPE_DURATION() external view returns (uint256);
+
     /// @notice Checks if an address is an operator
     /// @param operator Address to check
     /// @return True if the address is an operator, false otherwise
@@ -185,7 +189,8 @@ interface IIPWorld {
         string calldata symbol,
         address ipaId,
         int24[] calldata startTickList,
-        uint256[] calldata allocationList
+        uint256[] calldata allocationList,
+        bool antiSnipe
     ) external returns (address pool, address token);
 
     /// @notice Harvests fees from active liquidity positions and distributes to stakeholders

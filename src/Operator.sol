@@ -42,8 +42,9 @@ import {Errors} from "./lib/Errors.sol";
 /// @dev Handles signature-based operations, IP registration, and swap callbacks. Uses EIP712 for signatures.
 contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IERC721Receiver {
     /// @notice Authorizes valid token creations
-    bytes32 internal constant CREATE_IP_TOKEN_TYPEHASH =
-        keccak256("CREATE(address creator,int24[] startTick,uint256[] allocationList,uint256 nonce,uint256 deadline)");
+    bytes32 internal constant CREATE_IP_TOKEN_TYPEHASH = keccak256(
+        "CREATE(address creator,int24[] startTick,uint256[] allocationList,bool antiSnipe,uint256 nonce,uint256 deadline)"
+    );
 
     /// @notice Authorizes verification of preregistered IP registrations
     bytes32 internal constant REGISTER_IP_CLAIM_TOKENS_TYPEHASH = keccak256(
@@ -60,6 +61,9 @@ contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IER
 
     /// @notice Fee value for LP pools (this is equivalent to a 0.3% fee)
     uint24 public constant V3_FEE = 3000;
+
+    /// @notice Duration of anti-snipe period in seconds (10 minutes)
+    uint256 public constant ANTI_SNIPE_DURATION = 600;
 
     /// @notice Address of base token used for LP pairing
     address private immutable _weth;
@@ -148,6 +152,7 @@ contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IER
         address ipaId,
         int24[] calldata startTickList,
         uint256[] calldata allocationList,
+        bool antiSnipe,
         uint256 deadline,
         Signature memory signature
     ) external payable returns (address pool, address token) {
@@ -161,6 +166,7 @@ contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IER
                     msg.sender,
                     keccak256(abi.encodePacked(startTickList)),
                     keccak256(abi.encodePacked(allocationList)),
+                    antiSnipe,
                     _useNonce(msg.sender),
                     deadline
                 )
@@ -168,7 +174,7 @@ contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IER
             signature
         );
 
-        (pool, token) = ipWorld.createIpToken(msg.sender, name, symbol, ipaId, startTickList, allocationList);
+        (pool, token) = ipWorld.createIpToken(msg.sender, name, symbol, ipaId, startTickList, allocationList, antiSnipe);
 
         if (msg.value > 0) {
             // @dev msg.value can't be greater than type(int256).max

@@ -20,6 +20,7 @@ interface IIPTokenDeployer {
     /// @param v3Deployer Address of the Uniswap V3 deployer for pool address computation
     /// @param weth Address of the Wrapped Ether contract for the trading pair
     /// @param bidWallAmount Fixed amount of ETH reserved for bid wall operations
+    /// @param antiSnipeDuration Duration of anti-snipe period in seconds (0 = no limit)
     /// @param name ERC20 token name
     /// @param symbol ERC20 token symbol
     /// @return token Address of the deployed IP token
@@ -28,8 +29,10 @@ interface IIPTokenDeployer {
         address v3Deployer,
         address weth,
         uint256 bidWallAmount,
+        uint256 antiSnipeDuration,
         string calldata name,
-        string calldata symbol
+        string calldata symbol,
+        bool useAntiSnipe
     ) external returns (address token);
 
     /// @notice Returns the address of IPWorld contract

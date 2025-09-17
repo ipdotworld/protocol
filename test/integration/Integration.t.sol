@@ -52,11 +52,12 @@ contract IntegrationTest is BaseTest {
             keccak256(
                 abi.encode(
                     keccak256(
-                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,uint256 nonce,uint256 deadline)"
+                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,bool antiSnipe,uint256 nonce,uint256 deadline)"
                     ),
                     alice,
                     keccak256(abi.encodePacked(startTickList)),
                     keccak256(abi.encodePacked(allocationList)),
+                    false,
                     operator.nonces(alice),
                     block.timestamp + 1000
                 )
@@ -67,7 +68,7 @@ contract IntegrationTest is BaseTest {
 
         vm.prank(alice);
         (, address tokenAddr) = operator.createIpTokenWithSig{value: 1 ether}(
-            "chill", "CHILL", address(0), startTickList, allocationList, block.timestamp + 1000, sig
+            "chill", "CHILL", address(0), startTickList, allocationList, false, block.timestamp + 1000, sig
         );
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
@@ -147,9 +148,13 @@ contract IntegrationTest is BaseTest {
         allocList[1] = 220000;
 
         vm.prank(address(operator));
-        (, address tokenAddr) = ipWorld.createIpToken(alice, "MEME", "Meme Token", address(0), tickList, allocList);
+        (, address tokenAddr) =
+            ipWorld.createIpToken(alice, "MEME", "Meme Token", address(0), tickList, allocList, false);
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
+
+        // Skip anti-snipe period (600 seconds + buffer)
+        vm.warp(block.timestamp + 3600); // 1 hour forward
 
         // Display market cap before Alice's purchase
         console2.log("\n--- Market Cap Before Alice's Purchase ---");
@@ -400,9 +405,12 @@ contract IntegrationTest is BaseTest {
         // Create IP token with specified parameters
         vm.prank(address(operator));
         (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations);
+            ipWorld.createIpToken(alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations, false);
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
+
+        // Skip anti-snipe period (600 seconds + buffer)
+        vm.warp(block.timestamp + 3600); // 1 hour forward
 
         // Initial state
         console2.log("\n--- Initial State ---");
@@ -641,7 +649,7 @@ contract IntegrationTest is BaseTest {
         return string(bstr);
     }
 
-    function skip_test_BacktestOptimization() public {
+    function test_BacktestOptimization() public {
         vm.deal(alice, 1000000000 ether);
 
         console2.log("\n===== PARAMETER OPTIMIZATION BACKTEST =====");
@@ -724,9 +732,12 @@ contract IntegrationTest is BaseTest {
         // Create IP token
         vm.prank(address(operator));
         (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations);
+            ipWorld.createIpToken(alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations, false);
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
+
+        // Skip anti-snipe period (600 seconds + buffer)
+        vm.warp(block.timestamp + 3600); // 1 hour forward
 
         // Test costs
         uint256 cost800M = getQuoteForExactOutput(token, 800_000_000 * 10 ** token.decimals());
@@ -752,8 +763,9 @@ contract IntegrationTest is BaseTest {
     }
 
     function testLiquidity(IERC20Metadata token) internal {
-        // Setup
+        // Setup - ensure alice has enough WETH
         vm.startPrank(alice);
+        weth.deposit{value: 50000 ether}(); // Add more WETH for alice
         weth.approve(address(swapRouter), type(uint256).max);
 
         // Buy 900M
@@ -765,7 +777,7 @@ contract IntegrationTest is BaseTest {
                 recipient: alice,
                 deadline: block.timestamp + 1000,
                 amountOut: 900_000_000 * 10 ** token.decimals(),
-                amountInMaximum: 20000 ether,
+                amountInMaximum: 50000 ether, // Increased from 20000
                 sqrtPriceLimitX96: 0
             })
         );
@@ -773,9 +785,9 @@ contract IntegrationTest is BaseTest {
 
         // Quick simulation
         address trader = makeAddr("trader");
-        vm.deal(trader, 10000000 ether);
+        vm.deal(trader, 50000000 ether);
         vm.startPrank(trader);
-        weth.deposit{value: 10000000 ether}();
+        weth.deposit{value: 50000000 ether}();
         weth.approve(address(swapRouter), type(uint256).max);
 
         uint256 liq200k = 0;
@@ -1002,9 +1014,12 @@ contract IntegrationTest is BaseTest {
         // Create and test token
         vm.prank(address(operator));
         (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations);
+            ipWorld.createIpToken(alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations, false);
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
+
+        // Skip anti-snipe period (600 seconds + buffer)
+        vm.warp(block.timestamp + 3600); // 1 hour forward
 
         // Setup Alice
         vm.startPrank(alice);
@@ -1074,9 +1089,12 @@ contract IntegrationTest is BaseTest {
         // Create token
         vm.prank(address(operator));
         (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations);
+            ipWorld.createIpToken(alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations, false);
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
+
+        // Skip anti-snipe period (600 seconds + buffer)
+        vm.warp(block.timestamp + 3600); // 1 hour forward
 
         // Test costs
         uint256 cost800 = getQuoteForExactOutput(token, 800_000_000 * 1e18);
