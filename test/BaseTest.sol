@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
@@ -76,7 +76,7 @@ contract BaseTest is Test {
             address(
                 new ERC1967Proxy(
                     address(new IPOwnerVault(expectedIpWorldAddress, vestingDuration)),
-                    abi.encodeWithSelector(IPOwnerVault.initialize.selector, owner)
+                    abi.encodeWithSelector(IPOwnerVault.initialize.selector, address(this))
                 )
             )
         );
@@ -101,12 +101,17 @@ contract BaseTest is Test {
                             500 ether
                         )
                     ),
-                    abi.encodeWithSelector(IPWorld.initialize.selector, owner)
+                    abi.encodeWithSelector(IPWorld.initialize.selector, address(this))
                 )
             )
         );
 
         assertEq(address(ipWorld), expectedIpWorldAddress, "IPWorld address mismatch");
+
+        // Manually set BaseTest as owner since reinitializer(2) doesn't set owner
+        // Use the correct OwnableUpgradeable storage slot
+        bytes32 ownableStorageSlot = 0x9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c199300;
+        vm.store(address(ipWorld), ownableStorageSlot, bytes32(uint256(uint160(address(this)))));
 
         spgNft = ISPGNFT(
             registrationWorkflows.createCollection(
@@ -127,14 +132,19 @@ contract BaseTest is Test {
         );
 
         operator = new Operator(
-            address(weth), address(ipWorld), v3Deployer, address(spgNft), address(0), Constants.LICENSING_URL
+            address(weth),
+            address(ipWorld),
+            v3Deployer,
+            address(spgNft),
+            0x4027fc996DB0EaC23470e82c0Ce5D00fee42c26B,
+            Constants.LICENSING_URL
         );
 
         spgNft.grantRole(SPGNFTLib.MINTER_ROLE, address(operator));
         spgNft.grantRole(SPGNFTLib.ADMIN_ROLE, address(ipWorld));
 
+        // Now BaseTest is the owner, so we can call setOperator directly
         ipWorld.setOperator(address(operator), true);
-        operator.setExpectedSigner(msg.sender);
 
         // for deposits
         vm.deal(address(alice), 100 ether);

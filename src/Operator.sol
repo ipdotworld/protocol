@@ -20,7 +20,14 @@ import {ILicenseAttachmentWorkflows} from
 import {Licensing} from "@storyprotocol/core/lib/Licensing.sol";
 import {ISPGNFT} from "@storyprotocol/periphery/interfaces/ISPGNFT.sol";
 
-import {PILTerms} from "@storyprotocol/core/interfaces/modules/licensing/IPILicenseTemplate.sol";
+import {PILTerms, IPILicenseTemplate} from "@storyprotocol/core/interfaces/modules/licensing/IPILicenseTemplate.sol";
+import {ILicensingModule} from "@storyprotocol/core/interfaces/modules/licensing/ILicensingModule.sol";
+import {IIPAssetRegistry} from "@storyprotocol/core/interfaces/registries/IIPAssetRegistry.sol";
+import {PermissionHelper} from "../lib/protocol-periphery-v1/contracts/lib/PermissionHelper.sol";
+import {LicensingHelper} from "../lib/protocol-periphery-v1/contracts/lib/LicensingHelper.sol";
+import {IAccessController} from "@storyprotocol/core/interfaces/access/IAccessController.sol";
+import {IIPAccount} from "@storyprotocol/core/interfaces/IIPAccount.sol";
+import {AccessPermission} from "@storyprotocol/core/lib/AccessPermission.sol";
 
 import {IWETH9} from "./interfaces/IWETH9.sol";
 import {Constants} from "../utils/Constants.sol";
@@ -46,6 +53,10 @@ contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IER
     /// @notice Authorizes linking of tokens to a verified or claimed IP
     bytes32 internal constant LINK_TOKEN_TYPEHASH =
         keccak256("LINK(address sender,address ipaId,address[] tokens,uint256 nonce,uint256 deadline)");
+
+    /// @notice Authorizes claiming IP assets with token linking
+    bytes32 internal constant CLAIM_IP_TYPEHASH =
+        keccak256("CLAIM(address sender,address ipaId,address claimer,address[] tokens,uint256 nonce,uint256 deadline)");
 
     /// @notice Fee value for LP pools (this is equivalent to a 0.3% fee)
     uint24 public constant V3_FEE = 3000;
@@ -276,6 +287,167 @@ contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IER
         );
 
         ipWorld.linkTokensToIp(ipaId, tokens);
+    }
+
+    /// @notice Claims an existing IP asset and links tokens to it with signature verification
+    /// @dev Requires IP asset owner to have approved this contract for license token minting
+    /// @param ipaId Address of the existing IP asset
+    /// @param claimer Address to claim the IP asset for
+    /// @param tokens Array of token addresses to link to the IP asset
+    /// @param deadline Signature expiration timestamp
+    /// @param operatorSignature EIP712 signature for Operator verification (expectedSigner)
+    /// @param ipOwnerSignature EIP712 signature for IP licensing permissions (IP owner)
+    function claimIpWithSig(
+        address ipaId,
+        address claimer,
+        address[] calldata tokens,
+        uint256 deadline,
+        Signature memory operatorSignature,
+        Signature memory ipOwnerSignature
+    ) external {
+        if (ipaId == address(0) || claimer == address(0)) {
+            revert Errors.Operator_InvalidAddress();
+        }
+
+        if (block.timestamp > deadline) {
+            revert Errors.Operator_ERC2612ExpiredSignature(deadline);
+        }
+
+        bytes32 structHash = keccak256(
+            abi.encode(
+                CLAIM_IP_TYPEHASH,
+                msg.sender,
+                ipaId,
+                claimer,
+                keccak256(abi.encodePacked(tokens)),
+                _useNonce(msg.sender),
+                deadline
+            )
+        );
+        _checkSigner(structHash, operatorSignature);
+
+        // First attach our license terms to the IP asset
+        WorkflowStructs.LicenseTermsData[] memory licenseTermsData = new WorkflowStructs.LicenseTermsData[](1);
+        licenseTermsData[0] = WorkflowStructs.LicenseTermsData({
+            terms: PILTerms({
+                transferable: true,
+                royaltyPolicy: address(royaltyPolicy),
+                defaultMintingFee: 0,
+                expiration: 0,
+                commercialUse: true,
+                commercialAttribution: true,
+                commercializerChecker: address(0),
+                commercializerCheckerData: "",
+                commercialRevShare: 0,
+                commercialRevCeiling: 0,
+                derivativesAllowed: false,
+                derivativesAttribution: false,
+                derivativesApproval: false,
+                derivativesReciprocal: false,
+                derivativeRevCeiling: 0,
+                currency: _weth,
+                uri: licensingUrl
+            }),
+            licensingConfig: Licensing.LicensingConfig({
+                isSet: true,
+                mintingFee: 0,
+                licensingHook: address(0),
+                hookData: "",
+                commercialRevShare: 0,
+                disabled: false,
+                expectMinimumGroupRewardShare: 0,
+                expectGroupRewardPool: address(0)
+            })
+        });
+
+        // Use registerPILTermsAndAttach internal logic directly to bypass msg.sender check
+
+        // Get the actual IP owner from the IP Account's underlying NFT
+        IIPAccount ipAccount = IIPAccount(payable(ipaId));
+        (, address tokenContract, uint256 tokenId) = ipAccount.token();
+        address actualIpOwner = IERC721(tokenContract).ownerOf(tokenId);
+
+        // Create signature data using the IP owner's signature for licensing permissions
+        WorkflowStructs.SignatureData memory sigAttachAndConfig = WorkflowStructs.SignatureData({
+            signer: actualIpOwner, // The actual IP owner from NFT ownership
+            deadline: deadline,
+            signature: abi.encodePacked(ipOwnerSignature.r, ipOwnerSignature.s, ipOwnerSignature.v)
+        });
+
+        // Step 1: Set permissions for LicensingModule operations
+        // Create permission list
+        AccessPermission.Permission[] memory permissionList = new AccessPermission.Permission[](2);
+        permissionList[0] = AccessPermission.Permission({
+            ipAccount: ipaId,
+            signer: address(this), // Operator as signer
+            to: Constants.LICENSING_MODULE,
+            func: ILicensingModule.attachLicenseTerms.selector,
+            permission: AccessPermission.ALLOW
+        });
+        permissionList[1] = AccessPermission.Permission({
+            ipAccount: ipaId,
+            signer: address(this), // Operator as signer
+            to: Constants.LICENSING_MODULE,
+            func: ILicensingModule.setLicensingConfig.selector,
+            permission: AccessPermission.ALLOW
+        });
+
+        // Set permissions using executeWithSig
+        IIPAccount(payable(ipaId)).executeWithSig(
+            Constants.ACCESS_CONTROLLER,
+            0,
+            abi.encodeWithSelector(IAccessController.setBatchTransientPermissions.selector, permissionList),
+            sigAttachAndConfig.signer,
+            sigAttachAndConfig.deadline,
+            sigAttachAndConfig.signature
+        );
+
+        // Step 2: Register, attach, and set configs directly (LicensingHelper internal logic)
+
+        // Register PIL terms
+        IPILicenseTemplate pilTemplate = IPILicenseTemplate(Constants.PILICENSE_TEMPLATE);
+        uint256 licenseTermsId = pilTemplate.registerLicenseTerms(licenseTermsData[0].terms);
+
+        // Attach license terms
+        ILicensingModule licensingModule = ILicensingModule(Constants.LICENSING_MODULE);
+        try licensingModule.attachLicenseTerms(ipaId, Constants.PILICENSE_TEMPLATE, licenseTermsId) {
+            // license terms are attached successfully
+        } catch (bytes memory reason) {
+            // if the error is not that the license terms are already attached, revert with the original error
+            if (bytes4(reason) != 0x650aa092) {
+                // LicenseRegistry__LicenseTermsAlreadyAttached selector
+                assembly {
+                    revert(add(reason, 32), mload(reason))
+                }
+            }
+        }
+
+        // Set licensing configuration if provided
+        if (licenseTermsData[0].licensingConfig.isSet) {
+            licensingModule.setLicensingConfig(
+                ipaId, Constants.PILICENSE_TEMPLATE, licenseTermsId, licenseTermsData[0].licensingConfig
+            );
+        }
+
+        uint256[] memory licenseTermsIds = new uint256[](1);
+        licenseTermsIds[0] = licenseTermsId;
+
+        // Mint 1 License Token using the newly attached license terms
+
+        ILicensingModuleWithNFT(Constants.LICENSING_MODULE).mintLicenseTokens(
+            ipaId,
+            Constants.PILICENSE_TEMPLATE,
+            licenseTermsIds[0], // Use the newly created license terms ID
+            1,
+            address(this),
+            "",
+            type(uint256).max,
+            type(uint32).max
+        );
+
+        // Link tokens to IP and claim
+        ipWorld.linkTokensToIp(ipaId, tokens);
+        ipWorld.claimIp(ipaId, claimer);
     }
 
     function _checkSigner(bytes32 structHash, Signature memory sig) internal view {
