@@ -189,7 +189,8 @@ interface IIPWorld {
         string calldata symbol,
         address ipaId,
         int24[] calldata startTickList,
-        uint256[] calldata allocationList
+        uint256[] calldata allocationList,
+        bool antiSnipe
     ) external returns (address pool, address token);
 
     /// @notice Harvests fees from active liquidity positions and distributes to stakeholders

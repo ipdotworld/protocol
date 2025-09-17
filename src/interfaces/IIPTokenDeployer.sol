@@ -31,7 +31,8 @@ interface IIPTokenDeployer {
         uint256 bidWallAmount,
         uint256 antiSnipeDuration,
         string calldata name,
-        string calldata symbol
+        string calldata symbol,
+        bool useAntiSnipe
     ) external returns (address token);
 
     /// @notice Returns the address of IPWorld contract

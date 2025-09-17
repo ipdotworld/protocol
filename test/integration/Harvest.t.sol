@@ -24,7 +24,7 @@ contract HarvestTest is BaseTest {
     function test_Harvest_Unverified() public {
         vm.prank(address(operator));
         (address pool, address tokenAddr) =
-            ipWorld.createIpToken(alice, "chill", "CHILL", address(0), startTickList, allocationList);
+            ipWorld.createIpToken(alice, "chill", "CHILL", address(0), startTickList, allocationList, false);
         swap(IUniswapV3Pool(pool), 1 ether);
 
         IERC20 token = IERC20(tokenAddr);
@@ -85,7 +85,7 @@ contract HarvestTest is BaseTest {
         ipWorld.claimIp(ipaId, alice);
         vm.prank(address(operator));
         (address pool, address tokenAddr) =
-            ipWorld.createIpToken(alice, "chill", "CHILL", ipaId, startTickList, allocationList);
+            ipWorld.createIpToken(alice, "chill", "CHILL", ipaId, startTickList, allocationList, false);
         swap(IUniswapV3Pool(pool), 1 ether);
 
         IERC20 token = IERC20(tokenAddr);

@@ -22,7 +22,7 @@ contract VestingTest is BaseTest {
     function test_Vesting_CreatedUnverified() public {
         vm.prank(address(operator));
         (address pool, address tokenAddr) =
-            ipWorld.createIpToken(address(this), "chill", "CHILL", address(0), startTickList, allocationList);
+            ipWorld.createIpToken(address(this), "chill", "CHILL", address(0), startTickList, allocationList, false);
         swap(IUniswapV3Pool(pool), 1 ether);
 
         assertApproxEqAbs(
@@ -42,7 +42,7 @@ contract VestingTest is BaseTest {
         ipWorld.claimIp(ipaId, alice);
         assertEq(ipWorld.ipaRecipient(ipaId), address(alice));
         (address pool, address tokenAddr) =
-            ipWorld.createIpToken(address(this), "chill", "CHILL", ipaId, startTickList, allocationList);
+            ipWorld.createIpToken(address(this), "chill", "CHILL", ipaId, startTickList, allocationList, false);
         vm.stopPrank();
 
         swap(IUniswapV3Pool(pool), 1 ether);
@@ -98,7 +98,7 @@ contract VestingTest is BaseTest {
         ipWorld.claimIp(ipaId, alice);
         assertEq(ipWorld.ipaRecipient(ipaId), address(alice));
         (, address tokenAddr) =
-            ipWorld.createIpToken(address(this), "chill", "CHILL", ipaId, startTickList, allocationList);
+            ipWorld.createIpToken(address(this), "chill", "CHILL", ipaId, startTickList, allocationList, false);
         vm.stopPrank();
 
         // Harvest immediately without any swaps - no fees should have accrued

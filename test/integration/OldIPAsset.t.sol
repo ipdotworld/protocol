@@ -141,11 +141,12 @@ contract OldIPAssetTest is BaseTest {
             keccak256(
                 abi.encode(
                     keccak256(
-                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,uint256 nonce,uint256 deadline)"
+                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,bool antiSnipe,uint256 nonce,uint256 deadline)"
                     ),
                     alice,
                     keccak256(abi.encodePacked(startTickList)),
                     keccak256(abi.encodePacked(allocationList)),
+                    false,
                     operator.nonces(alice),
                     block.timestamp + 1000
                 )
@@ -157,7 +158,7 @@ contract OldIPAssetTest is BaseTest {
 
         vm.prank(alice);
         (address pool, address token) = operator.createIpTokenWithSig{value: 1 ether}(
-            "OldIP Token", "OLDIP", OLD_IPA, startTickList, allocationList, block.timestamp + 1000, sig
+            "OldIP Token", "OLDIP", OLD_IPA, startTickList, allocationList, false, block.timestamp + 1000, sig
         );
 
         // Verify token was created
@@ -227,11 +228,12 @@ contract OldIPAssetTest is BaseTest {
             keccak256(
                 abi.encode(
                     keccak256(
-                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,uint256 nonce,uint256 deadline)"
+                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,bool antiSnipe,uint256 nonce,uint256 deadline)"
                     ),
                     alice,
                     keccak256(abi.encodePacked(startTickList)),
                     keccak256(abi.encodePacked(allocationList)),
+                    false,
                     operator.nonces(alice),
                     block.timestamp + 1000
                 )
@@ -243,7 +245,7 @@ contract OldIPAssetTest is BaseTest {
 
         vm.prank(alice);
         (, address tokenAddr) = operator.createIpTokenWithSig{value: 1 ether}(
-            "OldIP Token", "OLDIP", OLD_IPA, startTickList, allocationList, block.timestamp + 1000, sig
+            "OldIP Token", "OLDIP", OLD_IPA, startTickList, allocationList, false, block.timestamp + 1000, sig
         );
 
         // Now perform swaps to generate fees
@@ -319,7 +321,7 @@ contract OldIPAssetTest is BaseTest {
 
         vm.prank(address(operator));
         (address pool, address tokenAddr) =
-            ipWorld.createIpToken(alice, "Direct Harvest Test", "DHT", OLD_IPA, startTickList, allocationList);
+            ipWorld.createIpToken(alice, "Direct Harvest Test", "DHT", OLD_IPA, startTickList, allocationList, false);
 
         // Initial swap to setup pool
         swap(IUniswapV3Pool(pool), 1 ether);

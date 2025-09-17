@@ -19,7 +19,7 @@ contract IPWorldTest is BaseTest {
 
     function test_IPWorld_createIpNotOperator() public {
         vm.expectRevert(Errors.IPWorld_OperatorOnly.selector);
-        ipWorld.createIpToken(address(this), "chill", "CHILL", address(0), startTickList, allocationList);
+        ipWorld.createIpToken(address(this), "chill", "CHILL", address(0), startTickList, allocationList, false);
     }
 
     function test_IPWorld_createIpTokenGt() public {
@@ -43,8 +43,9 @@ contract IPWorldTest is BaseTest {
             abi.encode(true)
         );
         vm.prank(address(operator));
-        (, address tokenAddr) =
-            ipWorld.createIpToken(address(this), "chill", "CHILL", address(0x12345), startTickList, allocationList);
+        (, address tokenAddr) = ipWorld.createIpToken(
+            address(this), "chill", "CHILL", address(0x12345), startTickList, allocationList, false
+        );
         (address ipaId_, int24[] memory startTicks) = ipWorld.tokenInfo(tokenAddr);
         assertEq(ipaId_, ipaId);
         for (uint256 i = 0; i < startTickList.length; i++) {
@@ -64,8 +65,9 @@ contract IPWorldTest is BaseTest {
         ipWorld.claimIp(ipaId, alice);
 
         vm.prank(address(operator));
-        (, address tokenAddr) =
-            ipWorld.createIpToken(address(this), "chill", "CHILL", address(0x12345), startTickList, allocationList);
+        (, address tokenAddr) = ipWorld.createIpToken(
+            address(this), "chill", "CHILL", address(0x12345), startTickList, allocationList, false
+        );
         assertEq(ipWorld.getTokenIpRecipient(tokenAddr), alice);
     }
 
@@ -433,7 +435,7 @@ contract IPWorldTest is BaseTest {
     function _checkCreateIpToken() internal returns (address pool, address tokenAddr) {
         vm.prank(address(operator));
         (pool, tokenAddr) =
-            ipWorld.createIpToken(address(this), "chill", "CHILL", address(0), startTickList, allocationList);
+            ipWorld.createIpToken(address(this), "chill", "CHILL", address(0), startTickList, allocationList, false);
 
         // Verify pool was created correctly
         address actualPool = v3Factory.getPool(tokenAddr, address(weth), POOL_FEE);
@@ -475,7 +477,7 @@ contract IPWorldTest is BaseTest {
     function test_BidWall_DoS_Revert() public {
         vm.prank(address(operator));
         (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "CHILL", "CHILL", address(0), startTickList, allocationList);
+            ipWorld.createIpToken(alice, "CHILL", "CHILL", address(0), startTickList, allocationList, false);
 
         IPToken ipToken = IPToken(tokenAddr);
 

@@ -52,11 +52,12 @@ contract IntegrationTest is BaseTest {
             keccak256(
                 abi.encode(
                     keccak256(
-                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,uint256 nonce,uint256 deadline)"
+                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,bool antiSnipe,uint256 nonce,uint256 deadline)"
                     ),
                     alice,
                     keccak256(abi.encodePacked(startTickList)),
                     keccak256(abi.encodePacked(allocationList)),
+                    false,
                     operator.nonces(alice),
                     block.timestamp + 1000
                 )
@@ -67,7 +68,7 @@ contract IntegrationTest is BaseTest {
 
         vm.prank(alice);
         (, address tokenAddr) = operator.createIpTokenWithSig{value: 1 ether}(
-            "chill", "CHILL", address(0), startTickList, allocationList, block.timestamp + 1000, sig
+            "chill", "CHILL", address(0), startTickList, allocationList, false, block.timestamp + 1000, sig
         );
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
@@ -147,7 +148,8 @@ contract IntegrationTest is BaseTest {
         allocList[1] = 220000;
 
         vm.prank(address(operator));
-        (, address tokenAddr) = ipWorld.createIpToken(alice, "MEME", "Meme Token", address(0), tickList, allocList);
+        (, address tokenAddr) =
+            ipWorld.createIpToken(alice, "MEME", "Meme Token", address(0), tickList, allocList, false);
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 
@@ -403,7 +405,7 @@ contract IntegrationTest is BaseTest {
         // Create IP token with specified parameters
         vm.prank(address(operator));
         (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations);
+            ipWorld.createIpToken(alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations, false);
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 
@@ -730,7 +732,7 @@ contract IntegrationTest is BaseTest {
         // Create IP token
         vm.prank(address(operator));
         (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations);
+            ipWorld.createIpToken(alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations, false);
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 
@@ -1012,7 +1014,7 @@ contract IntegrationTest is BaseTest {
         // Create and test token
         vm.prank(address(operator));
         (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations);
+            ipWorld.createIpToken(alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations, false);
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 
@@ -1087,7 +1089,7 @@ contract IntegrationTest is BaseTest {
         // Create token
         vm.prank(address(operator));
         (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations);
+            ipWorld.createIpToken(alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations, false);
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 

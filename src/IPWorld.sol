@@ -225,7 +225,8 @@ contract IPWorld is IIPWorld, IStoryHuntV3MintCallback, Ownable2StepUpgradeable,
         string calldata symbol,
         address ipaId,
         int24[] calldata startTickList,
-        uint256[] calldata allocationList
+        uint256[] calldata allocationList,
+        bool antiSnipe
     ) external onlyOperator returns (address pool, address token) {
         if (tokenCreator == address(0)) {
             revert Errors.IPWorld_InvalidAddress();
@@ -235,8 +236,9 @@ contract IPWorld is IIPWorld, IStoryHuntV3MintCallback, Ownable2StepUpgradeable,
             revert Errors.IPWorld_InvalidTick();
         }
 
+        uint256 antiSnipeDuration = antiSnipe ? ANTI_SNIPE_DURATION : 0;
         token = _tokenDeployer.deployToken(
-            tokenCreator, _v3Deployer, _weth, bidWallAmount, ANTI_SNIPE_DURATION, name, symbol
+            tokenCreator, _v3Deployer, _weth, bidWallAmount, antiSnipeDuration, name, symbol, antiSnipe
         );
         pool = _v3Factory.getPool(token, _weth, V3_FEE);
         if (pool == address(0)) {

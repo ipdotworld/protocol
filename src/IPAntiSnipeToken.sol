@@ -20,10 +20,10 @@ import {IIPWorld} from "./interfaces/IIPWorld.sol";
 import {IWETH9} from "./interfaces/IWETH9.sol";
 import {Errors} from "./lib/Errors.sol";
 
-/// @title IPToken
-/// @notice ERC20 token with automated bid wall for price support and permit functionality
-/// @dev Deployed by IPWorld, features burnable tokens and bid wall mechanism using fixed WETH amount
-contract IPToken is IIPToken, ERC20, ERC20Burnable, ERC20Permit, IStoryHuntV3MintCallback {
+/// @title IPAntiSnipeToken
+/// @notice ERC20 token with automated bid wall for price support, permit functionality, and anti-snipe protection
+/// @dev Deployed by IPWorld, features burnable tokens, bid wall mechanism using fixed WETH amount, and transfer limits during anti-snipe period
+contract IPAntiSnipeToken is IIPToken, ERC20, ERC20Burnable, ERC20Permit, IStoryHuntV3MintCallback {
     using TickMath for int24;
 
     /// @notice Total supply allocation for new token deploys (1 billion tokens)
@@ -37,6 +37,9 @@ contract IPToken is IIPToken, ERC20, ERC20Burnable, ERC20Permit, IStoryHuntV3Min
 
     /// @notice Maximum valid tick for bid wall positioning (adjusted for tick spacing)
     int24 internal constant MAX_TICK = TickMath.MAX_TICK - (TickMath.MAX_TICK % TICK_SPACING);
+
+    /// @notice Maximum sniper amount during anti-snipe period
+    uint256 internal constant MAX_SNIPER_AMOUNT = 300_000_000 * 1e18;
 
     /// @notice Address of the IP World contract that deployed this token
     address internal immutable _ipWorld;
@@ -53,6 +56,12 @@ contract IPToken is IIPToken, ERC20, ERC20Burnable, ERC20Permit, IStoryHuntV3Min
     /// @notice Amount of bid wall
     uint256 public immutable bidWallAmount;
 
+    /// @notice Duration of anti-snipe period in seconds (0 = no limit)
+    uint256 public immutable antiSnipeDuration;
+
+    /// @notice Token creation timestamp
+    uint256 private immutable _creationTimestamp;
+
     /// @notice Tick range for the bid wall
     int24 public bidWallTickLower;
 
@@ -62,6 +71,7 @@ contract IPToken is IIPToken, ERC20, ERC20Burnable, ERC20Permit, IStoryHuntV3Min
     /// @param v3Deployer_ Address of the Uniswap V3 deployer for pool address computation
     /// @param weth_ Address of the Wrapped Ether contract for the trading pair
     /// @param bidWallAmount_ Fixed amount of ETH reserved for bid wall operations
+    /// @param antiSnipeDuration_ Duration of anti-snipe period in seconds (0 = no limit)
     /// @param name_ ERC20 token name
     /// @param symbol_ ERC20 token symbol
     constructor(
@@ -69,6 +79,7 @@ contract IPToken is IIPToken, ERC20, ERC20Burnable, ERC20Permit, IStoryHuntV3Min
         address v3Deployer_,
         address weth_,
         uint256 bidWallAmount_,
+        uint256 antiSnipeDuration_,
         string memory name_,
         string memory symbol_
     ) ERC20(name_, symbol_) ERC20Permit(name_) {
@@ -79,6 +90,8 @@ contract IPToken is IIPToken, ERC20, ERC20Burnable, ERC20Permit, IStoryHuntV3Min
         liquidityPool = PoolAddress.computeAddress(v3Deployer_, PoolAddress.getPoolKey(address(this), weth_, V3_FEE));
         bidWallTickLower = MAX_TICK;
         bidWallAmount = bidWallAmount_;
+        antiSnipeDuration = antiSnipeDuration_;
+        _creationTimestamp = block.timestamp;
     }
 
     function repositionBidWall() external {
@@ -212,6 +225,45 @@ contract IPToken is IIPToken, ERC20, ERC20Burnable, ERC20Permit, IStoryHuntV3Min
         return tick;
     }
 
+    /// @notice Override transfer to implement anti-snipe protection
+    /// @dev Restricts transfers from liquidity pool during anti-snipe period
+    function transfer(address to, uint256 amount) public override returns (bool) {
+        address owner = _msgSender();
+
+        // Check anti-snipe protection if enabled and transfer is from liquidity pool
+        if (antiSnipeDuration > 0 && owner == liquidityPool && block.timestamp < _creationTimestamp + antiSnipeDuration)
+        {
+            // During anti-snipe period, limit transfers from liquidity pool
+            // But allow token creator to buy without limit
+            if (to != tokenCreator && amount > MAX_SNIPER_AMOUNT) {
+                revert Errors.IPToken_ExceedsAntiSnipeLimit();
+            }
+        }
+
+        _transfer(owner, to, amount);
+        return true;
+    }
+
+    /// @notice Override transferFrom to implement anti-snipe protection
+    /// @dev Restricts transfers from liquidity pool during anti-snipe period
+    function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
+        address spender = _msgSender();
+        _spendAllowance(from, spender, amount);
+
+        // Check anti-snipe protection if enabled and transfer is from liquidity pool
+        if (antiSnipeDuration > 0 && from == liquidityPool && block.timestamp < _creationTimestamp + antiSnipeDuration)
+        {
+            // During anti-snipe period, limit transfers from liquidity pool
+            // But allow token creator to buy without limit
+            if (to != tokenCreator && amount > MAX_SNIPER_AMOUNT) {
+                revert Errors.IPToken_ExceedsAntiSnipeLimit();
+            }
+        }
+
+        _transfer(from, to, amount);
+        return true;
+    }
+
     /// @notice Transfers tokens to LP pool post-deployment via v3 mint callback
     /// @param amount0Owed Amount of token0 required for liquidity transfer
     /// @param amount1Owed Amount of token1 required for liquidity transfer
@@ -225,11 +277,5 @@ contract IPToken is IIPToken, ERC20, ERC20Burnable, ERC20Permit, IStoryHuntV3Min
         } else if (amount0Owed > 0) {
             IERC20(_weth).transfer(msg.sender, amount0Owed);
         }
-    }
-
-    /// @notice Returns the anti-snipe duration (always 0 for regular IPToken)
-    /// @return Duration of anti-snipe protection in seconds
-    function antiSnipeDuration() external pure returns (uint256) {
-        return 0;
     }
 }
