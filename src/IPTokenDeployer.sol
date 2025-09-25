@@ -4,7 +4,6 @@ pragma solidity ^0.8.26;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IIPTokenDeployer} from "./interfaces/IIPTokenDeployer.sol";
 import {IPToken} from "./IPToken.sol";
-import {IPAntiSnipeToken} from "./IPAntiSnipeToken.sol";
 import {Errors} from "./lib/Errors.sol";
 
 /// @title IPTokenDeployer
@@ -39,17 +38,10 @@ contract IPTokenDeployer is IIPTokenDeployer {
         uint256 bidWallAmount,
         uint256 antiSnipeDuration,
         string calldata name,
-        string calldata symbol,
-        bool useAntiSnipe
+        string calldata symbol
     ) external onlyIPWorld returns (address token) {
-        // Deploy the appropriate token type based on useAntiSnipe flag
-        if (useAntiSnipe) {
-            token = address(
-                new IPAntiSnipeToken(tokenCreator, v3Deployer, weth, bidWallAmount, antiSnipeDuration, name, symbol)
-            );
-        } else {
-            token = address(new IPToken(tokenCreator, v3Deployer, weth, bidWallAmount, name, symbol));
-        }
+        // Deploy IPToken with anti-snipe duration (0 = disabled, >0 = enabled)
+        token = address(new IPToken(tokenCreator, v3Deployer, weth, bidWallAmount, antiSnipeDuration, name, symbol));
 
         // Transfer all tokens to IPWorld
         uint256 balance = IERC20(token).balanceOf(address(this));

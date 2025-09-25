@@ -32,25 +32,26 @@ library Constants {
     address public constant SWAP_ROUTER_AENEID = 0x21bc5d68F6DA0E43A90f078bcCb04feddEdcC93b;
     address public constant QUOTER_V2_AENEID = 0x72897A551d217848E15c7d9f5981BfAd49b46969;
     address public constant NFT_POSITION_MANAGER_AENEID = 0xeE96404216dd0D6dbbe197ED1066B5CD414ef3b9;
-    address public constant SPG_NFT_AENEID = 0x8a0E4cb8bB4Fff61dF610c644515eb9467237489;
-
-
+    
     // IPWorld mainnet contracts
     address public constant IPWORLD = 0xd0EFb8Cd4c7a3Eefe823Fe963af9661D8F0CB745;
     address public constant IPOWNER_VAULT = 0x81336266Ba5F26B8AFf7d2b2A2305F52A39292b2;
     address public constant SPG_NFT = 0x7A71F683969e9d6257DF68A910dfC22E33583af5;
     address public constant ROYALTY_POLICY = 0x4027fc996DB0EaC23470e82c0Ce5D00fee42c26B;
+    address public constant EXPECTED_SIGNER = 0xC0CD5e9c5fE3D38CaB8516bB4fEf6e0FE59398FD;
 
     // IPWorld testnet (AENEID) contracts
     address public constant IPWORLD_AENEID = 0x77475A8ca1AfE6a6dc9E82B32210709054937099;
     address public constant IPOWNER_VAULT_AENEID = 0x18C59E44B72A4B76FA3eE144F5E4f4fC177c1086;
+    address public constant SPG_NFT_AENEID = 0xB2f1CA042da808e28b692368f953c674dD00F497;
+    address public constant ROYALTY_POLICY_AENEID = 0x70436E39110f3e3923736B618888E17E764E796B;
+    address public constant EXPECTED_SIGNER_AENEID = 0x21a75A970a35967e990C817998373C60268a9eA6;
     
     // Example old token for testing
     address public constant SONA_TOKEN = 0x02353a3BD5c9668159cF9Fd54AC61b03212FCf41;
     
     // IPWorld deployment
     address public constant OWNER = 0x527b390cD37643F10dA8B8Dca980FA46EEe2f58b;
-    address public constant EXPECTED_SIGNER = 0x527b390cD37643F10dA8B8Dca980FA46EEe2f58b;
     
     // IPWorld deployment parameters
     uint24 public constant BURN_SHARE = 500_000;

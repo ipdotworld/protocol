@@ -310,7 +310,7 @@ contract OperatorTest is BaseTest {
 
         assertEq(alice.balance, aliceBalanceBefore - 1 ether);
 
-        // Verify the deployed token is IPAntiSnipeToken by checking antiSnipeDuration
+        // Verify the deployed token is IPToken by checking antiSnipeDuration
         // We can't directly check the contract type, but we can verify it has anti-snipe features
         // by checking if it implements the expected interface
         assertTrue(token != address(0));

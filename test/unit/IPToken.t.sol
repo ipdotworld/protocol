@@ -3,7 +3,6 @@ pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
 import {IPToken} from "../../src/IPToken.sol";
-import {IPAntiSnipeToken} from "../../src/IPAntiSnipeToken.sol";
 import {Errors} from "../../src/lib/Errors.sol";
 import {Constants} from "../../utils/Constants.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
@@ -21,7 +20,7 @@ contract IPTokenTest is Test {
 
     function setUp() public {
         vm.createSelectFork(Constants.STORY_MAINNET_RPC);
-        ipToken = new IPToken(address(this), Constants.V3_DEPLOYER, Constants.WETH, 100 ether, "IP Token", "IPT");
+        ipToken = new IPToken(address(this), Constants.V3_DEPLOYER, Constants.WETH, 100 ether, 0, "IP Token", "IPT");
 
         v3Factory = IUniswapV3Factory(Constants.V3_FACTORY);
         liquidityPool = v3Factory.createPool(address(ipToken), Constants.WETH, V3_FEE);
@@ -33,13 +32,13 @@ contract IPTokenTest is Test {
         assertEq(ipToken.symbol(), "IPT");
         assertEq(ipToken.decimals(), 18);
         assertEq(ipToken.totalSupply(), 1e27);
-        assertEq(ipToken.antiSnipeDuration(), 0); // No anti-snipe for this test token
+        // Regular IPToken doesn't have anti-snipe functionality
     }
 
     function test_AntiSnipe_DisabledByDefault() public {
         // Create token with 0 anti-snipe duration (disabled)
         IPToken tokenNoSnipe =
-            new IPToken(address(this), Constants.V3_DEPLOYER, Constants.WETH, 100 ether, "No Snipe Token", "NST");
+            new IPToken(address(this), Constants.V3_DEPLOYER, Constants.WETH, 100 ether, 0, "No Snipe Token", "NST");
 
         // First send tokens to liquidity pool
         address poolAddr = tokenNoSnipe.liquidityPool();
@@ -54,7 +53,7 @@ contract IPTokenTest is Test {
 
     function test_AntiSnipe_EnabledBlocks() public {
         // Create token with 600 second anti-snipe duration
-        IPAntiSnipeToken tokenWithSnipe = new IPAntiSnipeToken(
+        IPToken tokenWithSnipe = new IPToken(
             address(this),
             Constants.V3_DEPLOYER,
             Constants.WETH,
@@ -81,7 +80,7 @@ contract IPTokenTest is Test {
 
     function test_AntiSnipe_ExpiresAfterDuration() public {
         // Create token with 1 second anti-snipe duration for quick testing
-        IPAntiSnipeToken tokenWithSnipe = new IPAntiSnipeToken(
+        IPToken tokenWithSnipe = new IPToken(
             address(this),
             Constants.V3_DEPLOYER,
             Constants.WETH,
@@ -111,7 +110,7 @@ contract IPTokenTest is Test {
 
     function test_AntiSnipe_OnlyAppliesToLiquidityPool() public {
         // Create token with anti-snipe enabled
-        IPAntiSnipeToken tokenWithSnipe = new IPAntiSnipeToken(
+        IPToken tokenWithSnipe = new IPToken(
             address(this),
             Constants.V3_DEPLOYER,
             Constants.WETH,
@@ -134,7 +133,7 @@ contract IPTokenTest is Test {
 
     function test_AntiSnipe_TransferFromBlocked() public {
         // Create token with anti-snipe enabled
-        IPAntiSnipeToken tokenWithSnipe = new IPAntiSnipeToken(
+        IPToken tokenWithSnipe = new IPToken(
             address(this),
             Constants.V3_DEPLOYER,
             Constants.WETH,
@@ -164,7 +163,7 @@ contract IPTokenTest is Test {
 
     function test_AntiSnipe_TokenCreatorExemption() public {
         // Create token with anti-snipe enabled, this contract is the creator
-        IPAntiSnipeToken tokenWithSnipe = new IPAntiSnipeToken(
+        IPToken tokenWithSnipe = new IPToken(
             address(this), // This contract is the creator
             Constants.V3_DEPLOYER,
             Constants.WETH,
@@ -193,7 +192,7 @@ contract IPTokenTest is Test {
     function test_AntiSnipe_CreatorExemptionTransferFrom() public {
         // Create token with different creator address
         address creator = makeAddr("creator");
-        IPAntiSnipeToken tokenWithSnipe = new IPAntiSnipeToken(
+        IPToken tokenWithSnipe = new IPToken(
             creator, // Different creator
             Constants.V3_DEPLOYER,
             Constants.WETH,
