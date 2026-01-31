@@ -27,3 +27,6 @@
 [submodule "lib/protocol-periphery-v1"]
 	path = lib/protocol-periphery-v1
 	url = https://github.com/storyprotocol/protocol-periphery-v1
+[submodule "lib/reference"]
+	path = lib/reference
+	url = https://github.com/erc6551/reference

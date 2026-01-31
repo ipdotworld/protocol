@@ -50,3 +50,128 @@ tmp/
 *.pem
 *.key
 secrets/
+.venv/
+.moai-backups/
+# Backups
+.claude/settings.local.json
+# ============================================
+.ruff_cache/
+.mypy_cache/
+# Private keys (specific patterns to avoid false positives)
+.aws/credentials
+# MoAI-ADK Package Distribution .gitignore
+.LSOverride
+.claude/skills/*/*/*secret*
+.vscode/
+# Mac
+*-key.*
+*-api-key.*
+# Certificate files
+__pycache__/
+.env/
+*_key.*
+# Claude Code Configuration
+[Dd]esktop.ini
+# Python Cache & Bytecode
+*.pfx
+*.key.*
+htmlcov/
+*.sqlite
+*.dbm
+# Logs & Temporary Files
+# Credential patterns in environment files
+.Trashes
+# Version: 0.33.0
+*~
+*.rdb
+.next/
+*_backup_*/
+# Skill-specific credentials
+*.secret.*
+*_secret.*
+# Cloud provider credentials
+# Virtual Environments
+.VolumeIcon.icns
+.vercel/
+.claude/skills/*/.env*
+*-secret-key.*
+secret-*.*
+.claude/skills/*/*/*token*
+*.egg-info/
+*.backup
+build/
+.nuxt/
+dist-ssr/
+*.sublime-workspace
+# Updated: 2026-01-10
+api-key-*
+*.temp
+*.bak
+*-backup/
+.idea/
+.turbo/
+*_token=*
+.aws/config
+# Test Coverage
+venv/
+# Purpose: Essential patterns for user projects
+*.tsbuildinfo
+.DocumentRevisions-V100
+*.jks
+*.pyo
+.TemporaryItems
+.Spotlight-V100
+.coverage
+.claude/settings.local.*.json
+.directory
+*.njsproj
+dist/
+# Secrets and Credentials (CRITICAL)
+*.p12
+# Linux
+.claude/skills/*/secrets/
+*.pyc
+# Node.js (for docs/Nextra)
+*.suo
+Thumbs.db
+.uv-cache/
+*.egg
+*_secret=*
+.tscache/
+# OS Files
+.uv_cache/
+# FIXED: Issue #237 - Replaced overly broad *key* and *secret* patterns
+# Environment files
+# Build Tools & Frameworks
+*.db
+env/
+*-secret.*
+# ===========================================
+.claude/skills/*/*/*key*
+private-key*
+.claude/local/
+# Windows
+.pytest_cache/
+logs/
+.firebase/
+.netlify/
+.AppleDouble
+*.sln
+ehthumbs.db
+*.sw?
+.claude/.env.local*
+# IDE & Editors
+.fseventsd
+# Build Artifacts & Distribution
+# Deployment & CI/CD
+*.pyd
+*.sublime-project
+.#*
+*.backup/
+*.sqlite3
+.claude/plans/
+secret-key-*
+
+
+.moai/
+.mcp.json

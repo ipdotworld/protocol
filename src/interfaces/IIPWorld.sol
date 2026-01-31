@@ -26,7 +26,12 @@ interface IIPWorld {
     /// @param token Address of the IP token
     /// @param initialTick Initial tick position
     /// @param sqrtPriceX96 Initial sqrt price
-    event PoolInitialized(address indexed pool, address indexed token, int24 initialTick, uint160 sqrtPriceX96);
+    event PoolInitialized(
+        address indexed pool,
+        address indexed token,
+        int24 initialTick,
+        uint160 sqrtPriceX96
+    );
 
     /// @notice Emitted when liquidity is added to a position
     /// @param token Address of the IP token
@@ -51,7 +56,11 @@ interface IIPWorld {
     /// @param wethAmount Amount of WETH collected
     /// @param tokenAmount Amount of tokens collected
     event LiquidityCollected(
-        address indexed pool, int24 tickLower, int24 tickUpper, uint256 wethAmount, uint256 tokenAmount
+        address indexed pool,
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 wethAmount,
+        uint256 tokenAmount
     );
 
     /// @notice Emitted when a token is linked to an IP asset
@@ -68,7 +77,11 @@ interface IIPWorld {
     /// @param ipaId IP asset identifier
     /// @param currentRecipient Current recipient of the IP asset
     /// @param pendingRecipient Address of the pending recipient
-    event RecipientPending(address indexed ipaId, address indexed currentRecipient, address indexed pendingRecipient);
+    event RecipientPending(
+        address indexed ipaId,
+        address indexed currentRecipient,
+        address indexed pendingRecipient
+    );
 
     /// @notice Emitted when fees are harvested with detailed distribution
     /// @param token Address of the harvested token
@@ -86,6 +99,28 @@ interface IIPWorld {
         uint256 wethToIpOwner
     );
 
+    /// @notice Emitted per position when liquidity is migrated to high fee pool
+    /// @param token Address of the migrated token
+    /// @param oldPool Address of the 0.3% fee pool
+    /// @param newPool Address of the 1% fee pool
+    /// @param oldLowTick Lower tick of the old position
+    /// @param oldHighTick Upper tick of the old position
+    /// @param newLowTick Lower tick of the new position
+    /// @param newHighTick Upper tick of the new position
+    /// @param tokenAmount Token amount moved for this position
+    /// @param wethAmount WETH amount moved for this position
+    event Migrated(
+        address indexed token,
+        address indexed oldPool,
+        address indexed newPool,
+        int24 oldLowTick,
+        int24 oldHighTick,
+        int24 newLowTick,
+        int24 newHighTick,
+        uint256 tokenAmount,
+        uint256 wethAmount
+    );
+
     /// @notice Precision used for v3 calculations
     /// @return Precision constant used for percentage calculations
     function PRECISION() external view returns (uint256);
@@ -93,6 +128,10 @@ interface IIPWorld {
     /// @notice Fee value for LP pools (equivalent to a 0.3% fee)
     /// @return Uniswap V3 fee tier for all IP token pools
     function V3_FEE() external view returns (uint24);
+
+    /// @notice Fee value for high fee tier LP pools (1%)
+    /// @return Uniswap V3 fee tier for migrated token pools
+    function V3_FEE_HIGH() external view returns (uint24);
 
     /// @notice IP world owner vault (for vesting IP owner shares)
     /// @return Address of the vault contract managing IP owner token vesting
@@ -127,7 +166,9 @@ interface IIPWorld {
     /// @param token Address of the token
     /// @return ipaId Address of the IP asset associated with the token
     /// @return startTicks Array of start ticks for the token
-    function tokenInfo(address token) external view returns (address ipaId, int24[] memory startTicks);
+    function tokenInfo(
+        address token
+    ) external view returns (address ipaId, int24[] memory startTicks);
 
     /// @notice Fetches IPA recipient
     /// @param ipaId IP asset identifier
@@ -166,7 +207,10 @@ interface IIPWorld {
     /// @dev Only operators can call this function. Updates the token info for each token
     /// @param ipaId Story Protocol IP asset identifier to link tokens to
     /// @param tokenList Array of token addresses to be linked to the IP asset
-    function linkTokensToIp(address ipaId, address[] calldata tokenList) external;
+    function linkTokensToIp(
+        address ipaId,
+        address[] calldata tokenList
+    ) external;
 
     /// @notice Creates a new IP token with liquidity positions and optional IP asset linking
     /// @dev Only operators can call this function. Deploys token, creates pool, adds liquidity, and sets up vesting.
@@ -198,5 +242,19 @@ interface IIPWorld {
     /// @param token Address of the token to distribute
     /// @param addressList Array of recipient addresses
     /// @param amountList Array of amounts to send to each recipient (must match addressList length)
-    function claimToken(address token, address[] calldata addressList, uint256[] calldata amountList) external;
+    function claimToken(
+        address token,
+        address[] calldata addressList,
+        uint256[] calldata amountList
+    ) external;
+
+    /// @notice Migrates token liquidity from 0.3% fee pool to 1% fee pool
+    /// @dev Only owner or operator can call. One-way migration, no rollback.
+    ///      Collected liquidity is distributed equally across new positions.
+    /// @param token Address of the token to migrate
+    /// @param newStartTickList New tick positions for 1% pool (must be multiples of 200)
+    function migrate(
+        address token,
+        int24[] calldata newStartTickList
+    ) external;
 }
