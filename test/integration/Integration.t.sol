@@ -508,13 +508,11 @@ contract IntegrationTest is BaseTest {
     function getQuoteForExactOutput(IERC20Metadata token, uint256 amountOut) internal returns (uint256) {
         try quoterV2.quoteExactOutputSingle(
             IQuoterV2.QuoteExactOutputSingleParams({
-                tokenIn: address(weth),
-                tokenOut: address(token),
-                amount: amountOut,
-                fee: POOL_FEE,
-                sqrtPriceLimitX96: 0
+                tokenIn: address(weth), tokenOut: address(token), amount: amountOut, fee: POOL_FEE, sqrtPriceLimitX96: 0
             })
-        ) returns (uint256 quotedAmountIn, uint160, uint32, uint256) {
+        ) returns (
+            uint256 quotedAmountIn, uint160, uint32, uint256
+        ) {
             return quotedAmountIn;
         } catch {
             console2.log("Failed to get quote");
@@ -881,7 +879,9 @@ contract IntegrationTest is BaseTest {
                 fee: POOL_FEE,
                 sqrtPriceLimitX96: 0
             })
-        ) returns (uint256 quotedAmountIn, uint160, uint32, uint256) {
+        ) returns (
+            uint256 quotedAmountIn, uint160, uint32, uint256
+        ) {
             // Use actual total supply instead of hardcoded 1B
             uint256 quoterMarketCap = quotedAmountIn * totalSupply / (10 ** token.decimals());
             console2.log("Market Cap:", quoterMarketCap / 1e18, "WETH");
@@ -910,7 +910,9 @@ contract IntegrationTest is BaseTest {
                 fee: POOL_FEE,
                 sqrtPriceLimitX96: 0
             })
-        ) returns (uint256 quotedAmountIn, uint160, uint32, uint256) {
+        ) returns (
+            uint256 quotedAmountIn, uint160, uint32, uint256
+        ) {
             tokenPriceInWeth = quotedAmountIn;
         } catch {
             console2.log("Failed to get token price for liquidity calculation");
@@ -1177,7 +1179,9 @@ contract IntegrationTest is BaseTest {
                 fee: POOL_FEE,
                 sqrtPriceLimitX96: 0
             })
-        ) returns (uint256 quotedAmountIn, uint160, uint32, uint256) {
+        ) returns (
+            uint256 quotedAmountIn, uint160, uint32, uint256
+        ) {
             return quotedAmountIn * totalSupply / (10 ** token.decimals());
         } catch {
             return 0;
@@ -1197,7 +1201,9 @@ contract IntegrationTest is BaseTest {
                 fee: POOL_FEE,
                 sqrtPriceLimitX96: 0
             })
-        ) returns (uint256 tokenPriceInWeth, uint160, uint32, uint256) {
+        ) returns (
+            uint256 tokenPriceInWeth, uint160, uint32, uint256
+        ) {
             uint256 tokenValueInWeth = FullMath.mulDiv(tokenBalance, tokenPriceInWeth, 10 ** token.decimals());
             return tokenValueInWeth + wethBalance;
         } catch {
@@ -1227,10 +1233,7 @@ contract IntegrationTest is BaseTest {
         });
     }
 
-    function storyHuntV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata _data)
-        external
-        override
-    {
+    function storyHuntV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata _data) external override {
         require(amount0Delta > 0 || amount1Delta > 0); // swaps entirely within 0-liquidity regions are not supported
         SwapCallbackData memory data = abi.decode(_data, (SwapCallbackData));
         (address tokenIn, address tokenOut,) = data.path.decodeFirstPool();

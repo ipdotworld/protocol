@@ -45,9 +45,8 @@ contract UUPSUpgradeableTest is Test {
 
         uint64 version = 3;
         vm.prank(address(0x08));
-        UUPSUpgradeable(address(ipWorld)).upgradeToAndCall(
-            template, abi.encodeWithSelector(XXXX.initialize.selector, address(this), version)
-        );
+        UUPSUpgradeable(address(ipWorld))
+            .upgradeToAndCall(template, abi.encodeWithSelector(XXXX.initialize.selector, address(this), version));
 
         assertEq(Ownable(address(ipWorld)).owner(), address(this));
     }

@@ -115,11 +115,7 @@ contract OldIPAssetTest is BaseTest {
             MetaTx.calculateDomainSeparator(ipId),
             MetaTx.getExecuteStructHash(
                 MetaTx.Execute({
-                    to: Constants.ACCESS_CONTROLLER,
-                    value: 0,
-                    data: data,
-                    nonce: expectedState,
-                    deadline: deadline
+                    to: Constants.ACCESS_CONTROLLER, value: 0, data: data, nonce: expectedState, deadline: deadline
                 })
             )
         );

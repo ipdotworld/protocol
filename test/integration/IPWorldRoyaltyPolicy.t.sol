@@ -103,21 +103,21 @@ contract IPWorldRoyaltyPolicyTest is Test {
         address parentIpId = IIPAssetRegistry(Constants.IP_ASSET_REGISTRY).register(block.chainid, address(mockNFT), 1);
 
         // 5. Attach PIL terms to parent IP
-        ILicensingModule(Constants.LICENSING_MODULE).attachLicenseTerms(
-            parentIpId, Constants.PILICENSE_TEMPLATE, pilTermsId
-        );
+        ILicensingModule(Constants.LICENSING_MODULE)
+            .attachLicenseTerms(parentIpId, Constants.PILICENSE_TEMPLATE, pilTermsId);
 
         // 6. Mint license token for parent IP
-        uint256 licenseTokenId = ILicensingModule(Constants.LICENSING_MODULE).mintLicenseTokens(
-            parentIpId,
-            Constants.PILICENSE_TEMPLATE,
-            pilTermsId,
-            1, // amount
-            testUser, // receiver
-            "", // royaltyContext
-            0, // maxMintingFee
-            0 // maxRevenueShare
-        );
+        uint256 licenseTokenId = ILicensingModule(Constants.LICENSING_MODULE)
+            .mintLicenseTokens(
+                parentIpId,
+                Constants.PILICENSE_TEMPLATE,
+                pilTermsId,
+                1, // amount
+                testUser, // receiver
+                "", // royaltyContext
+                0, // maxMintingFee
+                0 // maxRevenueShare
+            );
 
         // 7. Register derivative IP using mockNFT
         address derivativeIpId =
@@ -127,12 +127,13 @@ contract IPWorldRoyaltyPolicyTest is Test {
         uint256[] memory licenseTokenIds = new uint256[](1);
         licenseTokenIds[0] = licenseTokenId;
 
-        ILicensingModule(Constants.LICENSING_MODULE).registerDerivativeWithLicenseTokens(
-            derivativeIpId,
-            licenseTokenIds,
-            "", // royaltyContext
-            0 // maxRts
-        );
+        ILicensingModule(Constants.LICENSING_MODULE)
+            .registerDerivativeWithLicenseTokens(
+                derivativeIpId,
+                licenseTokenIds,
+                "", // royaltyContext
+                0 // maxRts
+            );
 
         // Assert that the policy address is nonzero and registered
         assertTrue(address(policy) != address(0));

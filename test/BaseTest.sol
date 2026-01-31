@@ -67,8 +67,9 @@ contract BaseTest is Test {
         vm.createSelectFork(Constants.STORY_MAINNET_RPC);
         address owner = address(this);
 
-        ipMetadataEmpty =
-            WorkflowStructs.IPMetadata({ipMetadataURI: "", ipMetadataHash: "", nftMetadataURI: "", nftMetadataHash: ""});
+        ipMetadataEmpty = WorkflowStructs.IPMetadata({
+            ipMetadataURI: "", ipMetadataHash: "", nftMetadataURI: "", nftMetadataHash: ""
+        });
 
         address expectedIpWorldAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 4);
 
