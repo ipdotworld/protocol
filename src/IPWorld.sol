@@ -2,33 +2,17 @@
 pragma solidity ^0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {
-    ERC20Burnable
-} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import {
-    IERC721Receiver
-} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {
-    Ownable2StepUpgradeable
-} from "@openzeppelin-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
-import {
-    UUPSUpgradeable
-} from "@openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-import {
-    IUniswapV3Factory
-} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-import {
-    IUniswapV3Pool
-} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {TickMath} from "@uniswap/v3-core/contracts/libraries/TickMath.sol";
-import {
-    LiquidityAmounts
-} from "@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol";
+import {LiquidityAmounts} from "@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol";
 
-import {
-    IStoryHuntV3MintCallback
-} from "./interfaces/storyhunt/IStoryHuntV3MintCallback.sol";
+import {IStoryHuntV3MintCallback} from "./interfaces/storyhunt/IStoryHuntV3MintCallback.sol";
 
 import {TokenInfoLibrary, TokenInfo} from "./lib/TokenInfo.sol";
 import {IIPWorld} from "./interfaces/IIPWorld.sol";
@@ -41,37 +25,21 @@ import {Errors} from "./lib/Errors.sol";
 /// @title IPWorld
 /// @notice Main platform contract for launching IP-backed memecoins with one-sided Uniswap V3 liquidity
 /// @dev Manages token deployment, IP linking, LP management, and fee distribution. Upgradeable via UUPS.
-contract IPWorld is
-    IIPWorld,
-    IStoryHuntV3MintCallback,
-    Ownable2StepUpgradeable,
-    UUPSUpgradeable,
-    IERC721Receiver
-{
+contract IPWorld is IIPWorld, IStoryHuntV3MintCallback, Ownable2StepUpgradeable, UUPSUpgradeable, IERC721Receiver {
     using TickMath for int24;
     using TokenInfoLibrary for TokenInfo;
     using TokenInfoLibrary for mapping(address token => TokenInfo);
 
     uint256 public constant PRECISION = 1000000;
 
-    uint24 public constant V3_FEE = 3000;
-
-    /// @notice Tick spacing for LP pools (60 is used for a 0.3% fee tier)
-    int24 private constant TICK_SPACING = 60;
-
-    /// @notice Maximum valid tick for LP positions (adjusted for tick spacing)
-    int24 private constant MAX_TICK =
-        TickMath.MAX_TICK - (TickMath.MAX_TICK % TICK_SPACING);
-
-    /// @notice Fee tier for high-fee (1%) pools used after migration
-    uint24 public constant V3_FEE_HIGH = 10000;
+    /// @notice Fee tier for 1% pools
+    uint24 public constant V3_FEE = 10000;
 
     /// @notice Tick spacing for 1% fee tier pools
-    int24 private constant TICK_SPACING_HIGH = 200;
+    int24 private constant TICK_SPACING = 200;
 
-    /// @notice Maximum valid tick for 1% fee tier positions (adjusted for tick spacing)
-    int24 private constant MAX_TICK_HIGH =
-        TickMath.MAX_TICK - (TickMath.MAX_TICK % TICK_SPACING_HIGH);
+    /// @notice Maximum valid tick for LP positions (adjusted for tick spacing)
+    int24 private constant MAX_TICK = TickMath.MAX_TICK - (TickMath.MAX_TICK % TICK_SPACING);
 
     /// @notice Address of Wrapped Ether contract for trading pairs
     address private immutable _weth;
@@ -97,6 +65,9 @@ contract IPWorld is
 
     uint256 public immutable bidWallAmount;
 
+    /// @notice Fee required to create an IP token, transferred to treasury
+    uint256 public immutable creationFee;
+
     mapping(address operator => bool) public isOperator;
 
     /// @notice Stores token information including IP asset linkage and tick configurations
@@ -106,8 +77,7 @@ contract IPWorld is
     mapping(address ipaId => address recipient) private _ipaRecipient;
 
     /// @notice Maps IP asset identifiers to their pending reward recipients
-    mapping(address ipaId => address pendingRecipient)
-        private _ipaPendingRecipient;
+    mapping(address ipaId => address pendingRecipient) private _ipaPendingRecipient;
 
     /// @notice Initializes the IP World contract with immutable configuration
     /// @dev Validates addresses are non-zero and ipOwnerShare + buybackShare <= PRECISION.
@@ -122,6 +92,7 @@ contract IPWorld is
     /// @param buybackShare_ Percentage of fees used for bid wall operations (out of 1,000,000)
     /// @param bidWallAmount_ Fixed amount of ETH allocated for each token's bid wall
     /// @param tokenDeployer_ Address of the IP token deployer contract
+    /// @param creationFee_ Fee required to create an IP token
     constructor(
         address weth_,
         address v3Deployer_,
@@ -132,15 +103,12 @@ contract IPWorld is
         uint24 burnShare_,
         uint24 ipOwnerShare_,
         uint24 buybackShare_,
-        uint256 bidWallAmount_
+        uint256 bidWallAmount_,
+        uint256 creationFee_
     ) {
         if (
-            weth_ == address(0) ||
-            v3Deployer_ == address(0) ||
-            v3Factory_ == address(0) ||
-            ownerVault_ == address(0) ||
-            treasury_ == address(0) ||
-            tokenDeployer_ == address(0)
+            weth_ == address(0) || v3Deployer_ == address(0) || v3Factory_ == address(0) || ownerVault_ == address(0)
+                || treasury_ == address(0) || tokenDeployer_ == address(0)
         ) {
             revert Errors.IPWorld_InvalidAddress();
         }
@@ -157,6 +125,7 @@ contract IPWorld is
         ipOwnerShare = ipOwnerShare_;
         buybackShare = buybackShare_;
         bidWallAmount = bidWallAmount_;
+        creationFee = creationFee_;
         _disableInitializers();
     }
 
@@ -178,37 +147,27 @@ contract IPWorld is
     /// Getters and Setters
     ///
 
-    function tokenInfo(
-        address token
-    )
-        external
-        view
-        override
-        returns (address ipaId, int24[] memory startTicks)
-    {
+    function tokenInfo(address token) external view override returns (address ipaId, int24[] memory startTicks) {
         return _tokenInfo[token].decode();
     }
 
-    function ipaRecipient(
-        address ipaId
-    ) external view override returns (address) {
+    function ipaRecipient(address ipaId) external view override returns (address) {
         return _ipaRecipient[ipaId];
     }
 
-    function ipaPendingRecipient(
-        address ipaId
-    ) external view override returns (address) {
+    function ipaPendingRecipient(address ipaId) external view override returns (address) {
         return _ipaPendingRecipient[ipaId];
     }
 
-    function getTokenIpRecipient(
-        address token
-    ) external view returns (address) {
-        (address ipaId, ) = _tokenInfo[token].decode();
+    function getTokenIpRecipient(address token) external view returns (address) {
+        (address ipaId,) = _tokenInfo[token].decode();
         return _ipaRecipient[ipaId];
     }
 
     function setOperator(address operator, bool status) external onlyOwner {
+        if (operator == treasury) {
+            revert Errors.IPWorld_InvalidAddress();
+        }
         isOperator[operator] = status;
         emit SetOperator(operator, status);
     }
@@ -249,10 +208,7 @@ contract IPWorld is
         emit Claimed(ipaId, pendingRecipient);
     }
 
-    function linkTokensToIp(
-        address ipaId,
-        address[] calldata tokenList
-    ) external onlyOperator {
+    function linkTokensToIp(address ipaId, address[] calldata tokenList) external onlyOperator {
         if (ipaId == address(0)) {
             revert Errors.IPWorld_InvalidAddress();
         }
@@ -277,40 +233,34 @@ contract IPWorld is
         address ipaId,
         int24[] calldata startTickList,
         uint256[] calldata allocationList
-    ) external onlyOperator returns (address pool, address token) {
+    ) external payable onlyOperator returns (address pool, address token) {
+        // CEI: Checks - Validate fee
+        if (msg.value != creationFee) {
+            revert Errors.IPWorld_InvalidFee();
+        }
+
+        // CEI: Interactions - Transfer fee to treasury before state changes
+        if (creationFee > 0) {
+            (bool success,) = treasury.call{value: msg.value}("");
+            if (!success) revert Errors.IPWorld_FeeTransferFailed();
+        }
+
         if (tokenCreator == address(0)) {
             revert Errors.IPWorld_InvalidAddress();
         }
         uint256 length = startTickList.length;
-        if (
-            length != allocationList.length ||
-            length > TokenInfoLibrary.MAX_LP ||
-            length == 0
-        ) {
+        if (length != allocationList.length || length > TokenInfoLibrary.MAX_LP || length == 0) {
             revert Errors.IPWorld_InvalidTick();
         }
 
-        token = _tokenDeployer.deployToken(
-            tokenCreator,
-            _v3Deployer,
-            _weth,
-            bidWallAmount,
-            name,
-            symbol
-        );
+        token = _tokenDeployer.deployToken(tokenCreator, _v3Deployer, _weth, bidWallAmount, name, symbol);
         pool = _v3Factory.getPool(token, _weth, V3_FEE);
         if (pool == address(0)) {
             pool = _v3Factory.createPool(token, _weth, V3_FEE);
         }
-        emit TokenDeployed(
-            tokenCreator,
-            token,
-            pool,
-            startTickList,
-            allocationList
-        );
+        emit TokenDeployed(tokenCreator, token, pool, startTickList, allocationList);
 
-        (uint160 sqrtRatioX96, , , , , , ) = IUniswapV3Pool(pool).slot0();
+        (uint160 sqrtRatioX96,,,,,,) = IUniswapV3Pool(pool).slot0();
         if (sqrtRatioX96 == 0) {
             int24 initialTick = _weth < token ? MAX_TICK : -MAX_TICK;
             uint160 initialSqrtPrice = initialTick.getSqrtRatioAtTick();
@@ -325,22 +275,11 @@ contract IPWorld is
         uint256 totalSupply = IERC20(token).totalSupply();
         for (uint256 i = 1; i <= length; ++i) {
             int24 nextTick = (i == length) ? MAX_TICK : startTickList[i];
-            if (
-                startTick < TickMath.MIN_TICK ||
-                startTick >= nextTick ||
-                nextTick % TICK_SPACING != 0
-            ) {
+            if (startTick < TickMath.MIN_TICK || startTick >= nextTick || nextTick % TICK_SPACING != 0) {
                 revert Errors.IPWorld_InvalidTick();
             }
-            uint256 liquidity = (totalSupply * allocationList[i - 1]) /
-                PRECISION;
-            _addLiquidity(
-                token,
-                IUniswapV3Pool(pool),
-                liquidity,
-                startTick,
-                nextTick
-            );
+            uint256 liquidity = (totalSupply * allocationList[i - 1]) / PRECISION;
+            _addLiquidity(token, IUniswapV3Pool(pool), liquidity, startTick, nextTick);
             startTick = nextTick;
         }
 
@@ -364,45 +303,28 @@ contract IPWorld is
         if (token == address(0)) {
             revert Errors.IPWorld_InvalidAddress();
         }
-        (address ipaId, int24[] memory startTickList) = _tokenInfo[token]
-            .decode();
+        (address ipaId, int24[] memory startTickList) = _tokenInfo[token].decode();
         uint256 length = startTickList.length;
         if (length == 0) {
             revert Errors.IPWorld_WrongToken();
         }
 
-        // Try to get pool from IPToken interface, fallback to factory if it fails
-        IUniswapV3Pool pool;
+        // Look up the 1% pool from factory (all tokens use 1% pool after migration)
+        IUniswapV3Pool pool = IUniswapV3Pool(_v3Factory.getPool(_weth, token, V3_FEE));
+        if (address(pool) == address(0)) {
+            revert Errors.IPWorld_WrongToken();
+        }
+
+        // Determine if token supports bid wall (new IPToken has repositionBidWall)
         bool isNewToken;
-        try IIPToken(token).liquidityPool() returns (address poolAddress) {
-            pool = IUniswapV3Pool(poolAddress);
+        try IIPToken(token).liquidityPool() {
             isNewToken = true;
         } catch {
-            // For old tokens without liquidityPool(), calculate pool address from factory
-            pool = IUniswapV3Pool(_v3Factory.getPool(_weth, token, V3_FEE));
-            if (address(pool) == address(0)) {
-                revert Errors.IPWorld_WrongToken();
-            }
             isNewToken = false;
         }
         bool isNativeZero = _weth < token;
 
-        // Determine which pool has liquidity using the first tick range
-        int24 maxTickForPool = MAX_TICK;
-
-        if (!_hasLiquidity(pool, startTickList[0], (length == 1) ? MAX_TICK : startTickList[1], isNativeZero)) {
-            address highFeePoolAddr = _v3Factory.getPool(
-                token,
-                _weth,
-                V3_FEE_HIGH
-            );
-            if (highFeePoolAddr != address(0)) {
-                pool = IUniswapV3Pool(highFeePoolAddr);
-                maxTickForPool = MAX_TICK_HIGH;
-            }
-        }
-
-        (, int24 currentTick, , , , , ) = pool.slot0();
+        (, int24 currentTick,,,,,) = pool.slot0();
         if (isNativeZero) currentTick = -currentTick;
 
         int24 startTick;
@@ -410,19 +332,14 @@ contract IPWorld is
         uint256 i;
         for (i = 0; i < length; ++i) {
             startTick = startTickList[i];
-            nextTick = (i == length - 1) ? maxTickForPool : startTickList[i + 1];
+            nextTick = (i == length - 1) ? MAX_TICK : startTickList[i + 1];
             if (startTick <= currentTick && currentTick < nextTick) {
                 break;
             }
         }
 
         /// @dev Collect fees from the current active liquidity position
-        (uint256 wethAmount, uint256 tokenAmount) = _collectLiquidity(
-            pool,
-            startTick,
-            nextTick,
-            isNativeZero
-        );
+        (uint256 wethAmount, uint256 tokenAmount) = _collectLiquidity(pool, startTick, nextTick, isNativeZero);
 
         /// @dev If we're in the first position and there are multiple positions:
         /// - Move collected tokens to the next position (reposition liquidity)
@@ -431,7 +348,7 @@ contract IPWorld is
         uint256 burnAmount;
         if (i == 0 && length > 1) {
             startTick = nextTick;
-            nextTick = (length == 2) ? maxTickForPool : startTickList[2];
+            nextTick = (length == 2) ? MAX_TICK : startTickList[2];
             _addLiquidity(token, pool, tokenAmount, startTick, nextTick);
         } else {
             burnAmount = (tokenAmount * burnShare) / PRECISION;
@@ -443,10 +360,7 @@ contract IPWorld is
         address recipient = _ipaRecipient[ipaId];
 
         // Create vesting schedule if recipient exists and vesting not yet set
-        if (
-            recipient != address(0) &&
-            !IIPOwnerVault(ownerVault).vesting(token).isSet
-        ) {
+        if (recipient != address(0) && !IIPOwnerVault(ownerVault).vesting(token).isSet) {
             IIPOwnerVault(ownerVault).createVestingOnTokenDeploy(token);
         }
 
@@ -474,117 +388,24 @@ contract IPWorld is
             bool success;
             IWETH9(_weth).withdraw(wethToWithdraw);
 
-            (success, ) = treasury.call{value: treasuryAmount}("");
+            (success,) = treasury.call{value: treasuryAmount}("");
             if (!success) revert();
 
-            IIPOwnerVault(ownerVault).distributeOwdAmount{value: ipOwnerAmount}(
-                token
-            );
+            IIPOwnerVault(ownerVault).distributeOwdAmount{value: ipOwnerAmount}(token);
         }
 
         // Emit detailed harvest event
-        emit Harvest(
-            token,
-            wethAmount,
-            tokenAmount,
-            burnAmount,
-            buybackAmount,
-            ipOwnerAmount
-        );
-    }
-
-    ///
-    /// Pool Migration
-    ///
-
-    /// @notice Migrates token liquidity from 0.3% fee pool to 1% fee pool
-    /// @dev Only owner or operator can call. One-way migration, no rollback.
-    ///      Collected liquidity is distributed equally across new positions.
-    /// @param token Address of the token to migrate
-    /// @param newStartTickList New tick positions for 1% pool (must be multiples of TICK_SPACING_HIGH)
-    function migrate(
-        address token,
-        int24[] calldata newStartTickList
-    ) external {
-        if (msg.sender != owner() && !isOperator[msg.sender]) {
-            revert Errors.IPWorld_OperatorOnly();
-        }
-        if (token == address(0)) {
-            revert Errors.IPWorld_InvalidAddress();
-        }
-
-        // Decode existing token info
-        (address ipaId, int24[] memory oldStartTickList) = _tokenInfo[token]
-            .decode();
-        uint256 oldLength = oldStartTickList.length;
-        if (oldLength == 0) {
-            revert Errors.IPWorld_WrongToken();
-        }
-
-        // Validate: new tick list must match old position count (1:1 mapping)
-        uint256 newLength = newStartTickList.length;
-        if (newLength != oldLength) {
-            revert Errors.IPWorld_InvalidTick();
-        }
-
-        // Get 0.3% pool reference
-        IUniswapV3Pool oldPool;
-        try IIPToken(token).liquidityPool() returns (address poolAddress) {
-            oldPool = IUniswapV3Pool(poolAddress);
-        } catch {
-            address poolAddr = _v3Factory.getPool(_weth, token, V3_FEE);
-            if (poolAddr == address(0)) revert Errors.IPWorld_WrongToken();
-            oldPool = IUniswapV3Pool(poolAddr);
-        }
-        bool isNativeZero = _weth < token;
-
-        // Get or create 1% pool
-        address newPoolAddr = _v3Factory.getPool(token, _weth, V3_FEE_HIGH);
-        if (newPoolAddr == address(0)) {
-            newPoolAddr = _v3Factory.createPool(token, _weth, V3_FEE_HIGH);
-        }
-        IUniswapV3Pool newPool = IUniswapV3Pool(newPoolAddr);
-
-        // Initialize 1% pool if needed (copy price from 0.3% pool)
-        (uint160 sqrtPriceX96New, , , , , , ) = newPool.slot0();
-        if (sqrtPriceX96New == 0) {
-            (uint160 sqrtPriceX96Old, , , , , , ) = oldPool.slot0();
-            newPool.initialize(sqrtPriceX96Old);
-        }
-
-        // Migrate each position 1:1 from 0.3% pool to 1% pool
-        for (uint256 i = 0; i < oldLength; ++i) {
-            int24 oldNextTick = (i == oldLength - 1)
-                ? MAX_TICK
-                : oldStartTickList[i + 1];
-            int24 newNextTick = (i == newLength - 1)
-                ? MAX_TICK_HIGH
-                : newStartTickList[i + 1];
-            _migratePosition(
-                token,
-                oldPool,
-                newPool,
-                isNativeZero,
-                oldStartTickList[i],
-                oldNextTick,
-                newStartTickList[i],
-                newNextTick
-            );
-        }
-
-        // Update storage with new tick list
-        _tokenInfo[token] = TokenInfoLibrary.encode(ipaId, newStartTickList);
+        emit Harvest(token, wethAmount, tokenAmount, burnAmount, buybackAmount, ipOwnerAmount);
     }
 
     ///
     /// Token Management
     ///
 
-    function claimToken(
-        address token,
-        address[] calldata addressList,
-        uint256[] calldata amountList
-    ) external onlyOperator {
+    function claimToken(address token, address[] calldata addressList, uint256[] calldata amountList)
+        external
+        onlyOperator
+    {
         if (token == address(0)) {
             revert Errors.IPWorld_InvalidAddress();
         }
@@ -606,28 +427,6 @@ contract IPWorld is
     ///
     /// Internal
     ///
-
-    /// @notice Checks whether this contract has liquidity in a given tick range
-    /// @param pool Uniswap V3 pool to check
-    /// @param tickLower Lower tick boundary of the position
-    /// @param tickUpper Upper tick boundary of the position
-    /// @param isNativeZero Whether WETH is token0 in the pool
-    /// @return True if the position has non-zero liquidity
-    function _hasLiquidity(
-        IUniswapV3Pool pool,
-        int24 tickLower,
-        int24 tickUpper,
-        bool isNativeZero
-    ) internal view returns (bool) {
-        if (isNativeZero) {
-            (tickLower, tickUpper) = (-tickUpper, -tickLower);
-        }
-        bytes32 posKey = keccak256(
-            abi.encodePacked(address(this), tickLower, tickUpper)
-        );
-        (uint128 liq, , , , ) = pool.positions(posKey);
-        return liq > 0;
-    }
 
     /// @notice Adds liquidity to a Uniswap V3 position within specified tick range as one-sided range
     /// @param token Address of the IP token to add as liquidity
@@ -656,17 +455,9 @@ contract IPWorld is
         uint128 liquidity;
 
         if (nativeIsZero) {
-            liquidity = LiquidityAmounts.getLiquidityForAmount1(
-                lowerSqrtPriceX96,
-                upperSqrtPriceX96,
-                tokenForLiquidity
-            );
+            liquidity = LiquidityAmounts.getLiquidityForAmount1(lowerSqrtPriceX96, upperSqrtPriceX96, tokenForLiquidity);
         } else {
-            liquidity = LiquidityAmounts.getLiquidityForAmount0(
-                lowerSqrtPriceX96,
-                upperSqrtPriceX96,
-                tokenForLiquidity
-            );
+            liquidity = LiquidityAmounts.getLiquidityForAmount0(lowerSqrtPriceX96, upperSqrtPriceX96, tokenForLiquidity);
         }
         if (liquidity == 0) return;
 
@@ -674,14 +465,7 @@ contract IPWorld is
         pool.mint(address(this), tickLower, tickUpper, liquidity, data);
 
         // Emit event with original tick values (before potential swap)
-        emit LiquidityDeployed(
-            token,
-            address(pool),
-            originalTickLower,
-            originalTickUpper,
-            liquidity,
-            tokenForLiquidity
-        );
+        emit LiquidityDeployed(token, address(pool), originalTickLower, originalTickUpper, liquidity, tokenForLiquidity);
     }
 
     /// @notice Collects all liquidity and fees from a specific tick range position
@@ -691,12 +475,10 @@ contract IPWorld is
     /// @param nativeIsZero Whether WETH is token0 in the pool
     /// @return wethAmount Amount of WETH collected
     /// @return tokenAmount Amount of IP tokens collected
-    function _collectLiquidity(
-        IUniswapV3Pool pool,
-        int24 tickLower,
-        int24 tickUpper,
-        bool nativeIsZero
-    ) internal returns (uint256 wethAmount, uint256 tokenAmount) {
+    function _collectLiquidity(IUniswapV3Pool pool, int24 tickLower, int24 tickUpper, bool nativeIsZero)
+        internal
+        returns (uint256 wethAmount, uint256 tokenAmount)
+    {
         // Store original ticks for event
         int24 originalTickLower = tickLower;
         int24 originalTickUpper = tickUpper;
@@ -704,181 +486,15 @@ contract IPWorld is
         if (nativeIsZero) {
             (tickLower, tickUpper) = (-tickUpper, -tickLower);
             pool.burn(tickLower, tickUpper, 0);
-            (wethAmount, tokenAmount) = pool.collect(
-                address(this),
-                tickLower,
-                tickUpper,
-                type(uint128).max,
-                type(uint128).max
-            );
+            (wethAmount, tokenAmount) =
+                pool.collect(address(this), tickLower, tickUpper, type(uint128).max, type(uint128).max);
         } else {
             pool.burn(tickLower, tickUpper, 0);
-            (tokenAmount, wethAmount) = pool.collect(
-                address(this),
-                tickLower,
-                tickUpper,
-                type(uint128).max,
-                type(uint128).max
-            );
+            (tokenAmount, wethAmount) =
+                pool.collect(address(this), tickLower, tickUpper, type(uint128).max, type(uint128).max);
         }
 
-        emit LiquidityCollected(
-            address(pool),
-            originalTickLower,
-            originalTickUpper,
-            wethAmount,
-            tokenAmount
-        );
-    }
-
-    /// @notice Removes all liquidity from a Uniswap V3 position and collects all tokens
-    /// @param pool Uniswap V3 pool to remove liquidity from
-    /// @param tickLower Lower tick boundary of the position
-    /// @param tickUpper Upper tick boundary of the position
-    /// @param nativeIsZero Whether WETH is token0 in the pool
-    /// @return wethAmount Amount of WETH collected
-    /// @return tokenAmount Amount of IP tokens collected
-    function _removeLiquidity(
-        IUniswapV3Pool pool,
-        int24 tickLower,
-        int24 tickUpper,
-        bool nativeIsZero
-    ) internal returns (uint256 wethAmount, uint256 tokenAmount) {
-        int24 originalTickLower = tickLower;
-        int24 originalTickUpper = tickUpper;
-
-        if (nativeIsZero) {
-            (tickLower, tickUpper) = (-tickUpper, -tickLower);
-        }
-
-        bytes32 positionKey = keccak256(
-            abi.encodePacked(address(this), tickLower, tickUpper)
-        );
-        (uint128 liquidity, , , , ) = pool.positions(positionKey);
-
-        if (liquidity > 0) {
-            pool.burn(tickLower, tickUpper, liquidity);
-        } else {
-            pool.burn(tickLower, tickUpper, 0);
-        }
-
-        if (nativeIsZero) {
-            (wethAmount, tokenAmount) = pool.collect(
-                address(this),
-                tickLower,
-                tickUpper,
-                type(uint128).max,
-                type(uint128).max
-            );
-        } else {
-            (tokenAmount, wethAmount) = pool.collect(
-                address(this),
-                tickLower,
-                tickUpper,
-                type(uint128).max,
-                type(uint128).max
-            );
-        }
-
-        emit LiquidityCollected(
-            address(pool),
-            originalTickLower,
-            originalTickUpper,
-            wethAmount,
-            tokenAmount
-        );
-    }
-
-    /// @notice Adds two-sided liquidity to a Uniswap V3 position using both token and WETH
-    /// @param token Address of the IP token
-    /// @param pool Uniswap V3 pool to add liquidity to
-    /// @param tokenAmount Amount of tokens to use
-    /// @param wethAmount Amount of WETH to use
-    /// @param tickLower Lower tick boundary for the position
-    /// @param tickUpper Upper tick boundary for the position
-    function _addTwoSidedLiquidity(
-        address token,
-        IUniswapV3Pool pool,
-        uint256 tokenAmount,
-        uint256 wethAmount,
-        int24 tickLower,
-        int24 tickUpper
-    ) internal {
-        if (tokenAmount == 0 && wethAmount == 0) return;
-
-        bool nativeIsZero = _weth < token;
-        int24 originalTickLower = tickLower;
-        int24 originalTickUpper = tickUpper;
-
-        if (nativeIsZero) {
-            (tickLower, tickUpper) = (-tickUpper, -tickLower);
-        }
-
-        uint160 lowerSqrtPriceX96 = tickLower.getSqrtRatioAtTick();
-        uint160 upperSqrtPriceX96 = tickUpper.getSqrtRatioAtTick();
-        (uint160 currentSqrtPrice, , , , , , ) = pool.slot0();
-
-        uint128 liquidity;
-        if (nativeIsZero) {
-            liquidity = LiquidityAmounts.getLiquidityForAmounts(
-                currentSqrtPrice,
-                lowerSqrtPriceX96,
-                upperSqrtPriceX96,
-                wethAmount,
-                tokenAmount
-            );
-        } else {
-            liquidity = LiquidityAmounts.getLiquidityForAmounts(
-                currentSqrtPrice,
-                lowerSqrtPriceX96,
-                upperSqrtPriceX96,
-                tokenAmount,
-                wethAmount
-            );
-        }
-
-        if (liquidity == 0) return;
-
-        bytes memory data = abi.encode(token);
-        pool.mint(address(this), tickLower, tickUpper, liquidity, data);
-
-        emit LiquidityDeployed(
-            token,
-            address(pool),
-            originalTickLower,
-            originalTickUpper,
-            liquidity,
-            tokenAmount + wethAmount
-        );
-    }
-
-    /// @notice Migrates a single position from the old pool to the new pool
-    function _migratePosition(
-        address token,
-        IUniswapV3Pool oldPool,
-        IUniswapV3Pool newPool,
-        bool isNativeZero,
-        int24 oldLowTick,
-        int24 oldHighTick,
-        int24 newLowTick,
-        int24 newHighTick
-    ) internal {
-        (uint256 wethAmt, uint256 tokenAmt) = _removeLiquidity(
-            oldPool, oldLowTick, oldHighTick, isNativeZero
-        );
-        if (wethAmt == 0 && tokenAmt == 0) {
-            revert Errors.IPWorld_AlreadyMigrated();
-        }
-
-        _addTwoSidedLiquidity(
-            token, newPool, tokenAmt, wethAmt, newLowTick, newHighTick
-        );
-
-        emit Migrated(
-            token, address(oldPool), address(newPool),
-            oldLowTick, oldHighTick, newLowTick, newHighTick,
-            tokenAmt, wethAmt
-        );
+        emit LiquidityCollected(address(pool), originalTickLower, originalTickUpper, wethAmount, tokenAmount);
     }
 
     ///
@@ -886,63 +502,32 @@ contract IPWorld is
     ///
 
     /// @notice Transfers tokens to LP pool post-deployment via v3 mint callback
-    /// @dev Accepts callbacks from both 0.3% pool (via liquidityPool()) and 1% pool (via factory lookup).
-    ///      Handles two-sided liquidity transfers for migration scenarios.
+    /// @dev Accepts callbacks only from the 1% pool looked up via factory.
     /// @param amount0Owed Amount of token0 required for liquidity transfer
     /// @param amount1Owed Amount of token1 required for liquidity transfer
     /// @param data Additional data passed by the caller
-    function storyHuntV3MintCallback(
-        uint256 amount0Owed,
-        uint256 amount1Owed,
-        bytes calldata data
-    ) external {
+    function storyHuntV3MintCallback(uint256 amount0Owed, uint256 amount1Owed, bytes calldata data) external {
         address token = abi.decode(data, (address));
 
-        // Accept callback from EITHER the 0.3% pool or the 1% pool
-        bool isValid;
-        try IIPToken(token).liquidityPool() returns (address pool03) {
-            isValid = (msg.sender == pool03);
-        } catch {
-            // Old token without liquidityPool(), check factory
-            address pool03 = _v3Factory.getPool(token, _weth, V3_FEE);
-            isValid = (msg.sender == pool03 && pool03 != address(0));
-        }
-        if (!isValid) {
-            address pool1 = _v3Factory.getPool(token, _weth, V3_FEE_HIGH);
-            isValid = (msg.sender == pool1 && pool1 != address(0));
-        }
-
-        if (!isValid) {
+        // Accept callback only from the 1% pool
+        address pool = _v3Factory.getPool(token, _weth, V3_FEE);
+        if (msg.sender != pool || pool == address(0)) {
             revert Errors.IPWorld_OnlyLiquidityPool();
         }
 
-        // Handle two-sided transfers
         bool nativeIsZero = _weth < token;
         if (amount0Owed > 0) {
-            IERC20(nativeIsZero ? _weth : token).transfer(
-                msg.sender,
-                amount0Owed
-            );
+            IERC20(nativeIsZero ? _weth : token).transfer(msg.sender, amount0Owed);
         }
         if (amount1Owed > 0) {
-            IERC20(nativeIsZero ? token : _weth).transfer(
-                msg.sender,
-                amount1Owed
-            );
+            IERC20(nativeIsZero ? token : _weth).transfer(msg.sender, amount1Owed);
         }
     }
 
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override onlyOwner {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /// @notice Ensures Story IPA NFTs can be received on registration
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) external pure returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 

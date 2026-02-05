@@ -115,11 +115,7 @@ contract OldIPAssetTest is BaseTest {
             MetaTx.calculateDomainSeparator(ipId),
             MetaTx.getExecuteStructHash(
                 MetaTx.Execute({
-                    to: Constants.ACCESS_CONTROLLER,
-                    value: 0,
-                    data: data,
-                    nonce: expectedState,
-                    deadline: deadline
+                    to: Constants.ACCESS_CONTROLLER, value: 0, data: data, nonce: expectedState, deadline: deadline
                 })
             )
         );
@@ -129,7 +125,8 @@ contract OldIPAssetTest is BaseTest {
     }
 
     function test_OldIPAsset_CreateToken() public {
-        vm.deal(alice, 10 ether);
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(alice, fee + 10 ether);
 
         int24[] memory startTickList = new int24[](1);
         startTickList[0] = -230400;
@@ -156,7 +153,7 @@ contract OldIPAssetTest is BaseTest {
         Operator.Signature memory sig = Operator.Signature(v, r, s);
 
         vm.prank(alice);
-        (address pool, address token) = operator.createIpTokenWithSig{value: 1 ether}(
+        (address pool, address token) = operator.createIpTokenWithSig{value: fee}(
             "OldIP Token", "OLDIP", OLD_IPA, startTickList, allocationList, block.timestamp + 1000, sig
         );
 
@@ -214,7 +211,8 @@ contract OldIPAssetTest is BaseTest {
     }
 
     function test_OldIPAsset_Harvest() public {
-        vm.deal(alice, 10 ether);
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(alice, fee + 10 ether);
 
         // First create a token for the old IP asset
         int24[] memory startTickList = new int24[](1);
@@ -242,7 +240,7 @@ contract OldIPAssetTest is BaseTest {
         Operator.Signature memory sig = Operator.Signature(v, r, s);
 
         vm.prank(alice);
-        (, address tokenAddr) = operator.createIpTokenWithSig{value: 1 ether}(
+        (, address tokenAddr) = operator.createIpTokenWithSig{value: fee}(
             "OldIP Token", "OLDIP", OLD_IPA, startTickList, allocationList, block.timestamp + 1000, sig
         );
 
@@ -317,9 +315,12 @@ contract OldIPAssetTest is BaseTest {
         uint256[] memory allocationList = new uint256[](1);
         allocationList[0] = 970000;
 
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
-        (address pool, address tokenAddr) =
-            ipWorld.createIpToken(alice, "Direct Harvest Test", "DHT", OLD_IPA, startTickList, allocationList);
+        (address pool, address tokenAddr) = ipWorld.createIpToken{value: fee}(
+            alice, "Direct Harvest Test", "DHT", OLD_IPA, startTickList, allocationList
+        );
 
         // Initial swap to setup pool
         swap(IUniswapV3Pool(pool), 1 ether);

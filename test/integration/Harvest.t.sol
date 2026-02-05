@@ -22,9 +22,11 @@ contract HarvestTest is BaseTest {
     }
 
     function test_Harvest_Unverified() public {
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
         (address pool, address tokenAddr) =
-            ipWorld.createIpToken(alice, "chill", "CHILL", address(0), startTickList, allocationList);
+            ipWorld.createIpToken{value: fee}(alice, "chill", "CHILL", address(0), startTickList, allocationList);
         swap(IUniswapV3Pool(pool), 1 ether);
 
         IERC20 token = IERC20(tokenAddr);
@@ -83,9 +85,11 @@ contract HarvestTest is BaseTest {
 
         vm.prank(address(operator));
         ipWorld.claimIp(ipaId, alice);
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
         (address pool, address tokenAddr) =
-            ipWorld.createIpToken(alice, "chill", "CHILL", ipaId, startTickList, allocationList);
+            ipWorld.createIpToken{value: fee}(alice, "chill", "CHILL", ipaId, startTickList, allocationList);
         swap(IUniswapV3Pool(pool), 1 ether);
 
         IERC20 token = IERC20(tokenAddr);

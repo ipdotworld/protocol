@@ -9,7 +9,7 @@ import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Po
 import {TickMath} from "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 
 contract IPTokenTest is Test {
-    uint24 public constant V3_FEE = 3000; // 0.3%
+    uint24 public constant V3_FEE = 10000; // 1%
 
     IPToken public ipToken;
 

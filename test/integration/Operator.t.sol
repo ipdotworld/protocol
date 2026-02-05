@@ -168,7 +168,8 @@ contract OperatorTest is BaseTest {
     }
 
     function test_Operator_createIpTokenWithSig_ValidSingature() public {
-        vm.deal(alice, 1 ether);
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(alice, fee);
 
         // set expectedSigner to signer for test
         vm.prank(operator.owner());
@@ -201,7 +202,7 @@ contract OperatorTest is BaseTest {
         uint256 aliceBalanceBefore = alice.balance;
 
         vm.prank(alice);
-        operator.createIpTokenWithSig{value: 1 ether}(
+        operator.createIpTokenWithSig{value: fee}(
             "Test",
             "TEST",
             address(0), // ipaId
@@ -211,7 +212,7 @@ contract OperatorTest is BaseTest {
             sig
         );
 
-        assertEq(alice.balance, aliceBalanceBefore - 1 ether);
+        assertEq(alice.balance, aliceBalanceBefore - fee);
     }
 
     function test_Operator_createIpTokenWithSig_InvalidSingature_Values() public {

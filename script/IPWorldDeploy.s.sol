@@ -59,7 +59,8 @@ contract IPWorldDeploy is Script {
                 Constants.BURN_SHARE,
                 Constants.IP_OWNER_SHARE,
                 Constants.BUYBACK_SHARE,
-                Constants.BID_WALL_AMOUNT
+                Constants.BID_WALL_AMOUNT,
+                Constants.CREATION_FEE
             )
         );
         ipWorld = address(new ERC1967Proxy(ipWorldImpl, abi.encodeWithSelector(IPWorld.initialize.selector, deployer)));

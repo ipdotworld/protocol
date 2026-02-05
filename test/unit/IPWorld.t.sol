@@ -10,6 +10,7 @@ import {IPToken} from "../../src/IPToken.sol";
 import {IIPOwnerVault} from "../../src/interfaces/IIPOwnerVault.sol";
 import {PoolAddress} from "../../src/lib/storyhunt/PoolAddress.sol";
 import {Errors} from "../../src/lib/Errors.sol";
+import {Constants} from "../../utils/Constants.sol";
 import {BaseTest} from "../BaseTest.sol";
 
 contract IPWorldTest is BaseTest {
@@ -42,9 +43,12 @@ contract IPWorldTest is BaseTest {
             abi.encodeWithSelector(IIPAssetRegistry.isRegistered.selector, ipaId),
             abi.encode(true)
         );
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
-        (, address tokenAddr) =
-            ipWorld.createIpToken(address(this), "chill", "CHILL", address(0x12345), startTickList, allocationList);
+        (, address tokenAddr) = ipWorld.createIpToken{value: fee}(
+            address(this), "chill", "CHILL", address(0x12345), startTickList, allocationList
+        );
         (address ipaId_, int24[] memory startTicks) = ipWorld.tokenInfo(tokenAddr);
         assertEq(ipaId_, ipaId);
         for (uint256 i = 0; i < startTickList.length; i++) {
@@ -63,9 +67,12 @@ contract IPWorldTest is BaseTest {
         vm.prank(address(operator));
         ipWorld.claimIp(ipaId, alice);
 
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
-        (, address tokenAddr) =
-            ipWorld.createIpToken(address(this), "chill", "CHILL", address(0x12345), startTickList, allocationList);
+        (, address tokenAddr) = ipWorld.createIpToken{value: fee}(
+            address(this), "chill", "CHILL", address(0x12345), startTickList, allocationList
+        );
         assertEq(ipWorld.getTokenIpRecipient(tokenAddr), alice);
     }
 
@@ -431,9 +438,12 @@ contract IPWorldTest is BaseTest {
     }
 
     function _checkCreateIpToken() internal returns (address pool, address tokenAddr) {
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
-        (pool, tokenAddr) =
-            ipWorld.createIpToken(address(this), "chill", "CHILL", address(0), startTickList, allocationList);
+        (pool, tokenAddr) = ipWorld.createIpToken{value: fee}(
+            address(this), "chill", "CHILL", address(0), startTickList, allocationList
+        );
 
         // Verify pool was created correctly
         address actualPool = v3Factory.getPool(tokenAddr, address(weth), POOL_FEE);
@@ -473,9 +483,11 @@ contract IPWorldTest is BaseTest {
     }
 
     function test_BidWall_DoS_Revert() public {
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
         (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "CHILL", "CHILL", address(0), startTickList, allocationList);
+            ipWorld.createIpToken{value: fee}(alice, "CHILL", "CHILL", address(0), startTickList, allocationList);
 
         IPToken ipToken = IPToken(tokenAddr);
 
@@ -490,5 +502,45 @@ contract IPWorldTest is BaseTest {
 
         // Since we're at MAX_TICK, repositioning should be skipped
         assertEq(ipToken.bidWallTickLower(), MAX_TICK, "Bid wall should remain at MAX_TICK when at boundary");
+    }
+
+    function test_IPWorld_createIpToken_exactFee() public {
+        uint256 fee = ipWorld.creationFee();
+        uint256 treasuryBefore = address(treasury).balance;
+
+        vm.deal(address(operator), fee);
+        vm.prank(address(operator));
+        ipWorld.createIpToken{value: fee}(address(this), "fee", "FEE", address(0), startTickList, allocationList);
+
+        assertEq(address(treasury).balance, treasuryBefore + fee);
+    }
+
+    function test_IPWorld_createIpToken_insufficientFee() public {
+        uint256 fee = ipWorld.creationFee();
+
+        vm.deal(address(operator), fee);
+        vm.prank(address(operator));
+        vm.expectRevert(Errors.IPWorld_InvalidFee.selector);
+        ipWorld.createIpToken{value: fee - 1}(address(this), "fee", "FEE", address(0), startTickList, allocationList);
+    }
+
+    function test_IPWorld_createIpToken_excessFee() public {
+        uint256 fee = ipWorld.creationFee();
+
+        vm.deal(address(operator), fee + 1 ether);
+        vm.prank(address(operator));
+        vm.expectRevert(Errors.IPWorld_InvalidFee.selector);
+        ipWorld.createIpToken{value: fee + 1 ether}(
+            address(this), "fee", "FEE", address(0), startTickList, allocationList
+        );
+    }
+
+    function test_IPWorld_creationFee_getter() public view {
+        assertEq(ipWorld.creationFee(), Constants.CREATION_FEE);
+    }
+
+    function test_IPWorld_setOperator_treasury_reverts() public {
+        vm.expectRevert(Errors.IPWorld_InvalidAddress.selector);
+        ipWorld.setOperator(treasury, true);
     }
 }

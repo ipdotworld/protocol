@@ -29,11 +29,11 @@ contract IPToken is IIPToken, ERC20, ERC20Burnable, ERC20Permit, IStoryHuntV3Min
     /// @notice Total supply allocation for new token deploys (1 billion tokens)
     uint256 internal constant TOTAL_SUPPLY = 1_000_000_000 * 1e18;
 
-    /// @notice Fee tier for Uniswap V3 pool (0.3% fee)
-    uint24 internal constant V3_FEE = 3000;
+    /// @notice Fee tier for Uniswap V3 pool (1% fee)
+    uint24 internal constant V3_FEE = 10000;
 
-    /// @notice Tick spacing for bid wall positions (60 for 0.3% fee tier)
-    int24 internal constant TICK_SPACING = 60;
+    /// @notice Tick spacing for bid wall positions (200 for 1% fee tier)
+    int24 internal constant TICK_SPACING = 200;
 
     /// @notice Maximum valid tick for bid wall positioning (adjusted for tick spacing)
     int24 internal constant MAX_TICK = TickMath.MAX_TICK - (TickMath.MAX_TICK % TICK_SPACING);

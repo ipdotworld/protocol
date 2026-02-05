@@ -43,8 +43,11 @@ library Errors {
     /// @notice Thrown when the caller is not the current recipient
     error IPWorld_NotCurrentRecipient();
 
-    /// @notice Token already migrated to high fee pool
-    error IPWorld_AlreadyMigrated();
+    /// @notice Fee transfer to treasury failed
+    error IPWorld_FeeTransferFailed();
+
+    /// @notice Invalid fee amount
+    error IPWorld_InvalidFee();
 
     /// @notice Migration operation failed
     error IPWorld_MigrationFailed();

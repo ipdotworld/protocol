@@ -24,7 +24,7 @@ contract IntegrationTest is BaseTest {
 
     uint256 internal signerPk = 0xa11ce;
     address internal signer = vm.addr(signerPk);
-    int24 internal startTick = -138_180;
+    int24 internal startTick = -138_200;
     uint256 internal constant PRECISION = 1_000_000;
 
     struct SwapCallbackData {
@@ -66,7 +66,7 @@ contract IntegrationTest is BaseTest {
         Operator.Signature memory sig = Operator.Signature(v, r, s);
 
         vm.prank(alice);
-        (, address tokenAddr) = operator.createIpTokenWithSig{value: 1 ether}(
+        (, address tokenAddr) = operator.createIpTokenWithSig{value: 11 ether}(
             "chill", "CHILL", address(0), startTickList, allocationList, block.timestamp + 1000, sig
         );
 
@@ -146,8 +146,11 @@ contract IntegrationTest is BaseTest {
         allocList[0] = 750000;
         allocList[1] = 220000;
 
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
-        (, address tokenAddr) = ipWorld.createIpToken(alice, "MEME", "Meme Token", address(0), tickList, allocList);
+        (, address tokenAddr) =
+            ipWorld.createIpToken{value: fee}(alice, "MEME", "Meme Token", address(0), tickList, allocList);
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 
@@ -398,9 +401,11 @@ contract IntegrationTest is BaseTest {
         testAllocations[2] = 10000; // 1%
 
         // Create IP token with specified parameters
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
         (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations);
+            ipWorld.createIpToken{value: fee}(alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations);
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 
@@ -508,13 +513,11 @@ contract IntegrationTest is BaseTest {
     function getQuoteForExactOutput(IERC20Metadata token, uint256 amountOut) internal returns (uint256) {
         try quoterV2.quoteExactOutputSingle(
             IQuoterV2.QuoteExactOutputSingleParams({
-                tokenIn: address(weth),
-                tokenOut: address(token),
-                amount: amountOut,
-                fee: POOL_FEE,
-                sqrtPriceLimitX96: 0
+                tokenIn: address(weth), tokenOut: address(token), amount: amountOut, fee: POOL_FEE, sqrtPriceLimitX96: 0
             })
-        ) returns (uint256 quotedAmountIn, uint160, uint32, uint256) {
+        ) returns (
+            uint256 quotedAmountIn, uint160, uint32, uint256
+        ) {
             return quotedAmountIn;
         } catch {
             console2.log("Failed to get quote");
@@ -722,9 +725,11 @@ contract IntegrationTest is BaseTest {
 
     function runBacktestCore(int24[] memory testStartTicks, uint256[] memory testAllocations) internal {
         // Create IP token
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
         (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations);
+            ipWorld.createIpToken{value: fee}(alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations);
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 
@@ -881,7 +886,9 @@ contract IntegrationTest is BaseTest {
                 fee: POOL_FEE,
                 sqrtPriceLimitX96: 0
             })
-        ) returns (uint256 quotedAmountIn, uint160, uint32, uint256) {
+        ) returns (
+            uint256 quotedAmountIn, uint160, uint32, uint256
+        ) {
             // Use actual total supply instead of hardcoded 1B
             uint256 quoterMarketCap = quotedAmountIn * totalSupply / (10 ** token.decimals());
             console2.log("Market Cap:", quoterMarketCap / 1e18, "WETH");
@@ -910,7 +917,9 @@ contract IntegrationTest is BaseTest {
                 fee: POOL_FEE,
                 sqrtPriceLimitX96: 0
             })
-        ) returns (uint256 quotedAmountIn, uint160, uint32, uint256) {
+        ) returns (
+            uint256 quotedAmountIn, uint160, uint32, uint256
+        ) {
             tokenPriceInWeth = quotedAmountIn;
         } catch {
             console2.log("Failed to get token price for liquidity calculation");
@@ -1000,9 +1009,11 @@ contract IntegrationTest is BaseTest {
 
     function singleAllocation(int24[] memory testStartTicks, uint256[] memory testAllocations) external {
         // Create and test token
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
         (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations);
+            ipWorld.createIpToken{value: fee}(alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations);
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 
@@ -1072,9 +1083,11 @@ contract IntegrationTest is BaseTest {
         returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256)
     {
         // Create token
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
         (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations);
+            ipWorld.createIpToken{value: fee}(alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations);
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 
@@ -1177,7 +1190,9 @@ contract IntegrationTest is BaseTest {
                 fee: POOL_FEE,
                 sqrtPriceLimitX96: 0
             })
-        ) returns (uint256 quotedAmountIn, uint160, uint32, uint256) {
+        ) returns (
+            uint256 quotedAmountIn, uint160, uint32, uint256
+        ) {
             return quotedAmountIn * totalSupply / (10 ** token.decimals());
         } catch {
             return 0;
@@ -1197,7 +1212,9 @@ contract IntegrationTest is BaseTest {
                 fee: POOL_FEE,
                 sqrtPriceLimitX96: 0
             })
-        ) returns (uint256 tokenPriceInWeth, uint160, uint32, uint256) {
+        ) returns (
+            uint256 tokenPriceInWeth, uint160, uint32, uint256
+        ) {
             uint256 tokenValueInWeth = FullMath.mulDiv(tokenBalance, tokenPriceInWeth, 10 ** token.decimals());
             return tokenValueInWeth + wethBalance;
         } catch {
@@ -1227,10 +1244,7 @@ contract IntegrationTest is BaseTest {
         });
     }
 
-    function storyHuntV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata _data)
-        external
-        override
-    {
+    function storyHuntV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata _data) external override {
         require(amount0Delta > 0 || amount1Delta > 0); // swaps entirely within 0-liquidity regions are not supported
         SwapCallbackData memory data = abi.decode(_data, (SwapCallbackData));
         (address tokenIn, address tokenOut,) = data.path.decodeFirstPool();
