@@ -35,6 +35,9 @@ contract IPWorld is IIPWorld, IStoryHuntV3MintCallback, Ownable2StepUpgradeable,
     /// @notice Fee tier for 1% pools
     uint24 public constant V3_FEE = 10000;
 
+    /// @notice Anti-snipe duration in seconds (2 minutes)
+    uint256 public constant ANTI_SNIPE_DURATION = 120;
+
     /// @notice Tick spacing for 1% fee tier pools
     int24 private constant TICK_SPACING = 200;
 
@@ -232,7 +235,8 @@ contract IPWorld is IIPWorld, IStoryHuntV3MintCallback, Ownable2StepUpgradeable,
         string calldata symbol,
         address ipaId,
         int24[] calldata startTickList,
-        uint256[] calldata allocationList
+        uint256[] calldata allocationList,
+        bool antiSnipe
     ) external payable onlyOperator returns (address pool, address token) {
         // CEI: Checks - Validate fee
         if (msg.value != creationFee) {
@@ -253,7 +257,8 @@ contract IPWorld is IIPWorld, IStoryHuntV3MintCallback, Ownable2StepUpgradeable,
             revert Errors.IPWorld_InvalidTick();
         }
 
-        token = _tokenDeployer.deployToken(tokenCreator, _v3Deployer, _weth, bidWallAmount, name, symbol);
+        uint256 antiSnipeDuration = antiSnipe ? ANTI_SNIPE_DURATION : 0;
+        token = _tokenDeployer.deployToken(tokenCreator, _v3Deployer, _weth, bidWallAmount, antiSnipeDuration, name, symbol);
         pool = _v3Factory.getPool(token, _weth, V3_FEE);
         if (pool == address(0)) {
             pool = _v3Factory.createPool(token, _weth, V3_FEE);

@@ -94,6 +94,10 @@ interface IIPWorld {
     /// @return Uniswap V3 fee tier for all IP token pools
     function V3_FEE() external view returns (uint24);
 
+    /// @notice Anti-snipe duration in seconds
+    /// @return Duration of anti-snipe period for new tokens
+    function ANTI_SNIPE_DURATION() external view returns (uint256);
+
     /// @notice IP world owner vault (for vesting IP owner shares)
     /// @return Address of the vault contract managing IP owner token vesting
     function ownerVault() external view returns (address);
@@ -181,6 +185,7 @@ interface IIPWorld {
     /// @param ipaId Story Protocol IP asset identifier to link (zero address if none)
     /// @param startTickList Array of tick values defining liquidity position boundaries (each must be multiple of TICK_SPACING = 200)
     /// @param allocationList Array of allocation percentages for each liquidity position (sum must be <= PRECISION = 1,000,000)
+    /// @param antiSnipe If true, enables anti-snipe protection for ANTI_SNIPE_DURATION seconds
     /// @return pool Address of the created Uniswap V3 pool
     /// @return token Address of the deployed IP token contract
     function createIpToken(
@@ -189,7 +194,8 @@ interface IIPWorld {
         string calldata symbol,
         address ipaId,
         int24[] calldata startTickList,
-        uint256[] calldata allocationList
+        uint256[] calldata allocationList,
+        bool antiSnipe
     ) external payable returns (address pool, address token);
 
     /// @notice Harvests fees from active liquidity positions and distributes to stakeholders

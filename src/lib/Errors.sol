@@ -10,6 +10,9 @@ library Errors {
     /// @notice Only liquidity pool can call this function
     error IPToken_OnlyLiquidityPool();
 
+    /// @notice Transfer exceeds anti-snipe limit
+    error IPToken_ExceedsAntiSnipeLimit();
+
     ////////////////////////////////////////////////////////////////////////////
     //                            IPWorld                                    //
     ////////////////////////////////////////////////////////////////////////////
