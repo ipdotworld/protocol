@@ -35,7 +35,7 @@ contract SimulateUpgradeTest is Test {
         console2.log("PRECISION:", ipWorld.PRECISION());
         console2.log("ownerVault:", ipWorld.ownerVault());
         console2.log("treasury:", ipWorld.treasury());
-        console2.log("burnShare:", ipWorld.burnShare());
+        console2.log("airdropShare:", ipWorld.airdropShare());
         console2.log("ipOwnerShare:", ipWorld.ipOwnerShare());
         console2.log("buybackShare:", ipWorld.buybackShare());
         console2.log("bidWallAmount:", ipWorld.bidWallAmount());
@@ -52,7 +52,7 @@ contract SimulateUpgradeTest is Test {
         uint256 prePrecision = ipWorld.PRECISION();
         address preOwnerVault = ipWorld.ownerVault();
         address preTreasury = ipWorld.treasury();
-        uint24 preBurnShare = ipWorld.burnShare();
+        uint24 preAirdropShare = ipWorld.airdropShare();
         uint24 preIpOwnerShare = ipWorld.ipOwnerShare();
         uint24 preBuybackShare = ipWorld.buybackShare();
         uint256 preBidWallAmount = ipWorld.bidWallAmount();
@@ -84,7 +84,7 @@ contract SimulateUpgradeTest is Test {
                 newTokenDeployer,
                 Constants.IPOWNER_VAULT,
                 Constants.TREASURY,
-                Constants.BURN_SHARE,
+                Constants.AIRDROP_SHARE,
                 Constants.IP_OWNER_SHARE,
                 Constants.BUYBACK_SHARE,
                 Constants.BID_WALL_AMOUNT,
@@ -112,7 +112,7 @@ contract SimulateUpgradeTest is Test {
         assertEq(ipWorld.PRECISION(), prePrecision, "Post: PRECISION changed");
         assertEq(ipWorld.ownerVault(), preOwnerVault, "Post: ownerVault changed");
         assertEq(ipWorld.treasury(), preTreasury, "Post: treasury changed");
-        assertEq(ipWorld.burnShare(), preBurnShare, "Post: burnShare changed");
+        assertEq(ipWorld.airdropShare(), preAirdropShare, "Post: airdropShare changed");
         assertEq(ipWorld.ipOwnerShare(), preIpOwnerShare, "Post: ipOwnerShare changed");
         assertEq(ipWorld.buybackShare(), preBuybackShare, "Post: buybackShare changed");
         assertEq(ipWorld.bidWallAmount(), preBidWallAmount, "Post: bidWallAmount changed");

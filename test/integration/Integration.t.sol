@@ -47,16 +47,18 @@ contract IntegrationTest is BaseTest {
         uint256[] memory allocationList = new uint256[](1);
         allocationList[0] = 970000;
 
+        bool antiSnipe = false;
         bytes32 digest = MessageHashUtils.toTypedDataHash(
             operator.DOMAIN_SEPARATOR(),
             keccak256(
                 abi.encode(
                     keccak256(
-                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,uint256 nonce,uint256 deadline)"
+                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,bool antiSnipe,uint256 nonce,uint256 deadline)"
                     ),
                     alice,
                     keccak256(abi.encodePacked(startTickList)),
                     keccak256(abi.encodePacked(allocationList)),
+                    antiSnipe,
                     operator.nonces(alice),
                     block.timestamp + 1000
                 )
@@ -67,7 +69,7 @@ contract IntegrationTest is BaseTest {
 
         vm.prank(alice);
         (, address tokenAddr) = operator.createIpTokenWithSig{value: 11 ether}(
-            "chill", "CHILL", address(0), startTickList, allocationList, block.timestamp + 1000, sig
+            "chill", "CHILL", address(0), startTickList, allocationList, antiSnipe, block.timestamp + 1000, sig
         );
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
@@ -150,7 +152,7 @@ contract IntegrationTest is BaseTest {
         vm.deal(address(operator), fee);
         vm.prank(address(operator));
         (, address tokenAddr) =
-            ipWorld.createIpToken{value: fee}(alice, "MEME", "Meme Token", address(0), tickList, allocList);
+            ipWorld.createIpToken{value: fee}(alice, "MEME", "Meme Token", address(0), tickList, allocList, false);
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 
@@ -404,8 +406,9 @@ contract IntegrationTest is BaseTest {
         uint256 fee = ipWorld.creationFee();
         vm.deal(address(operator), fee);
         vm.prank(address(operator));
-        (, address tokenAddr) =
-            ipWorld.createIpToken{value: fee}(alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations);
+        (, address tokenAddr) = ipWorld.createIpToken{value: fee}(
+            alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations, false
+        );
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 
@@ -569,15 +572,11 @@ contract IntegrationTest is BaseTest {
                 day200k = day;
                 console2.log("\n>>> Reached 200k WETH market cap");
 
-                // Log burned tokens from 1B supply
-                uint256 totalBurned = 1_000_000_000 * 1e18 - token.totalSupply();
-                console2.log("Total tokens burned from 1B:", totalBurned / 1e18, "tokens");
-
-                // Calculate burn from bidWall: (totalBurned - ipWorldBalance) / (1 - burnShare) * burnShare
-                uint256 ipWorldBalance = token.balanceOf(address(ipWorld));
-                uint256 burnFromBidWall = (totalBurned - ipWorldBalance) * PRECISION
-                    / (PRECISION - Constants.BURN_SHARE) * Constants.BURN_SHARE / PRECISION;
-                console2.log("Burn from bidWall:", burnFromBidWall / 1e18, "tokens");
+                // Log airdrop pool accumulation
+                uint256 tokenAirdropBalance = ipWorld.tokenAirdropPool(address(token));
+                uint256 wethAirdropBalance = ipWorld.wethAirdropPool(address(token));
+                console2.log("Token airdrop pool:", tokenAirdropBalance / 1e18, "tokens");
+                console2.log("WETH airdrop pool:", wethAirdropBalance / 1e18, "WETH");
             }
 
             if (!reached2M && marketCap >= targetMC2) {
@@ -586,15 +585,11 @@ contract IntegrationTest is BaseTest {
                 day2M = day;
                 console2.log("\n>>> Reached 2M WETH market cap");
 
-                // Log burned tokens from 1B supply
-                uint256 totalBurned = 1_000_000_000 * 1e18 - token.totalSupply();
-                console2.log("Total tokens burned from 1B:", totalBurned / 1e18, "tokens");
-
-                // Calculate burn from bidWall: (totalBurned - ipWorldBalance) / (1 - burnShare) * burnShare
-                uint256 ipWorldBalance = token.balanceOf(address(ipWorld));
-                uint256 burnFromBidWall = (totalBurned - ipWorldBalance) * PRECISION
-                    / (PRECISION - Constants.BURN_SHARE) * Constants.BURN_SHARE / PRECISION;
-                console2.log("Burn from bidWall:", burnFromBidWall / 1e18, "tokens");
+                // Log airdrop pool accumulation
+                uint256 tokenAirdropBalance = ipWorld.tokenAirdropPool(address(token));
+                uint256 wethAirdropBalance = ipWorld.wethAirdropPool(address(token));
+                console2.log("Token airdrop pool:", tokenAirdropBalance / 1e18, "tokens");
+                console2.log("WETH airdrop pool:", wethAirdropBalance / 1e18, "WETH");
             }
 
             if (!reached20M && marketCap >= 20_000_000 ether) {
@@ -604,15 +599,11 @@ contract IntegrationTest is BaseTest {
                 console2.log("\n>>> Reached 20M WETH market cap");
                 console2.log("Liquidity at 20M:", liquidity20M / 1e18, "WETH");
 
-                // Log burned tokens from 1B supply
-                uint256 totalBurned = 1_000_000_000 * 1e18 - token.totalSupply();
-                console2.log("Total tokens burned from 1B:", totalBurned / 1e18, "tokens");
-
-                // Calculate burn from bidWall: (totalBurned - ipWorldBalance) / (1 - burnShare) * burnShare
-                uint256 ipWorldBalance = token.balanceOf(address(ipWorld));
-                uint256 burnFromBidWall = (totalBurned - ipWorldBalance) * PRECISION
-                    / (PRECISION - Constants.BURN_SHARE) * Constants.BURN_SHARE / PRECISION;
-                console2.log("Burn from bidWall:", burnFromBidWall / 1e18, "tokens");
+                // Log airdrop pool accumulation
+                uint256 tokenAirdropBalance = ipWorld.tokenAirdropPool(address(token));
+                uint256 wethAirdropBalance = ipWorld.wethAirdropPool(address(token));
+                console2.log("Token airdrop pool:", tokenAirdropBalance / 1e18, "tokens");
+                console2.log("WETH airdrop pool:", wethAirdropBalance / 1e18, "WETH");
                 console2.log("Days to reach 20M:", day20M);
                 console2.log("Requirement: >= 200k WETH");
                 console2.log(liquidity20M >= 200_000 ether ? "PASS" : "FAIL");
@@ -728,8 +719,9 @@ contract IntegrationTest is BaseTest {
         uint256 fee = ipWorld.creationFee();
         vm.deal(address(operator), fee);
         vm.prank(address(operator));
-        (, address tokenAddr) =
-            ipWorld.createIpToken{value: fee}(alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations);
+        (, address tokenAddr) = ipWorld.createIpToken{value: fee}(
+            alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations, false
+        );
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 
@@ -1012,8 +1004,9 @@ contract IntegrationTest is BaseTest {
         uint256 fee = ipWorld.creationFee();
         vm.deal(address(operator), fee);
         vm.prank(address(operator));
-        (, address tokenAddr) =
-            ipWorld.createIpToken{value: fee}(alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations);
+        (, address tokenAddr) = ipWorld.createIpToken{value: fee}(
+            alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations, false
+        );
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 
@@ -1086,8 +1079,9 @@ contract IntegrationTest is BaseTest {
         uint256 fee = ipWorld.creationFee();
         vm.deal(address(operator), fee);
         vm.prank(address(operator));
-        (, address tokenAddr) =
-            ipWorld.createIpToken{value: fee}(alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations);
+        (, address tokenAddr) = ipWorld.createIpToken{value: fee}(
+            alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations, false
+        );
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 

@@ -47,7 +47,7 @@ contract UpgradeHarvestTest is Test {
                 address(new IPTokenDeployer(Constants.IPWORLD)),
                 Constants.IPOWNER_VAULT,
                 Constants.TREASURY,
-                Constants.BURN_SHARE,
+                Constants.AIRDROP_SHARE,
                 Constants.IP_OWNER_SHARE,
                 Constants.BUYBACK_SHARE,
                 Constants.BID_WALL_AMOUNT,

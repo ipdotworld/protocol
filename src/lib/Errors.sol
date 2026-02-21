@@ -55,6 +55,21 @@ library Errors {
     /// @notice Migration operation failed
     error IPWorld_MigrationFailed();
 
+    /// @notice ipTreasury already configured for this IP asset
+    error IPWorld_IpTreasuryAlreadySet();
+
+    /// @notice ipTreasury address is address(0)
+    error IPWorld_InvalidIpTreasury();
+
+    /// @notice airdrop pool balance insufficient
+    error IPWorld_InsufficientAirdropPool();
+
+    /// @notice referral address is address(0)
+    error IPWorld_InvalidReferral();
+
+    /// @notice No pending referral for this IP asset
+    error IPWorld_NoPendingReferral();
+
     ////////////////////////////////////////////////////////////////////////////
     //                              IPOwnerVault                              //
     ////////////////////////////////////////////////////////////////////////////

@@ -25,9 +25,9 @@ contract UUPSUpgradeableTest is Test {
                 address(0x06),
                 address(0x04),
                 address(0x05),
-                500_000,
                 300_000,
-                500_000,
+                200_000,
+                100_000,
                 500 ether,
                 0.01 ether
             )

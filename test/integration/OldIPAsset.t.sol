@@ -133,16 +133,18 @@ contract OldIPAssetTest is BaseTest {
         uint256[] memory allocationList = new uint256[](1);
         allocationList[0] = 970000;
 
+        bool antiSnipe = false;
         bytes32 digest = MessageHashUtils.toTypedDataHash(
             operator.DOMAIN_SEPARATOR(),
             keccak256(
                 abi.encode(
                     keccak256(
-                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,uint256 nonce,uint256 deadline)"
+                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,bool antiSnipe,uint256 nonce,uint256 deadline)"
                     ),
                     alice,
                     keccak256(abi.encodePacked(startTickList)),
                     keccak256(abi.encodePacked(allocationList)),
+                    antiSnipe,
                     operator.nonces(alice),
                     block.timestamp + 1000
                 )
@@ -154,7 +156,7 @@ contract OldIPAssetTest is BaseTest {
 
         vm.prank(alice);
         (address pool, address token) = operator.createIpTokenWithSig{value: fee}(
-            "OldIP Token", "OLDIP", OLD_IPA, startTickList, allocationList, block.timestamp + 1000, sig
+            "OldIP Token", "OLDIP", OLD_IPA, startTickList, allocationList, antiSnipe, block.timestamp + 1000, sig
         );
 
         // Verify token was created
@@ -171,14 +173,17 @@ contract OldIPAssetTest is BaseTest {
         address[] memory tokens = new address[](1);
         tokens[0] = makeAddr("mockToken");
 
+
         bytes32 digest = MessageHashUtils.toTypedDataHash(
             operator.DOMAIN_SEPARATOR(),
             keccak256(
                 abi.encode(
-                    keccak256("LINK(address sender,address ipaId,address[] tokens,uint256 nonce,uint256 deadline)"),
+                    keccak256(
+                        "LINK(address sender,address ipaId,address[] tokens,uint256 nonce,uint256 deadline)"
+                    ),
                     alice,
                     OLD_IPA,
-                    tokens,
+                    keccak256(abi.encodePacked(tokens)),
                     operator.nonces(alice),
                     block.timestamp + 1000
                 )
@@ -203,7 +208,7 @@ contract OldIPAssetTest is BaseTest {
         address newRecipient = bob;
 
         vm.prank(address(operator));
-        ipWorld.claimIp(OLD_IPA, newRecipient);
+        ipWorld.claimIp(OLD_IPA, newRecipient, address(0x999));
 
         // Verify the recipient was set
         address recipient = ipWorld.ipaRecipient(OLD_IPA);
@@ -220,16 +225,18 @@ contract OldIPAssetTest is BaseTest {
         uint256[] memory allocationList = new uint256[](1);
         allocationList[0] = 970000;
 
+        bool antiSnipe = false;
         bytes32 digest = MessageHashUtils.toTypedDataHash(
             operator.DOMAIN_SEPARATOR(),
             keccak256(
                 abi.encode(
                     keccak256(
-                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,uint256 nonce,uint256 deadline)"
+                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,bool antiSnipe,uint256 nonce,uint256 deadline)"
                     ),
                     alice,
                     keccak256(abi.encodePacked(startTickList)),
                     keccak256(abi.encodePacked(allocationList)),
+                    antiSnipe,
                     operator.nonces(alice),
                     block.timestamp + 1000
                 )
@@ -241,7 +248,7 @@ contract OldIPAssetTest is BaseTest {
 
         vm.prank(alice);
         (, address tokenAddr) = operator.createIpTokenWithSig{value: fee}(
-            "OldIP Token", "OLDIP", OLD_IPA, startTickList, allocationList, block.timestamp + 1000, sig
+            "OldIP Token", "OLDIP", OLD_IPA, startTickList, allocationList, antiSnipe, block.timestamp + 1000, sig
         );
 
         // Now perform swaps to generate fees
@@ -319,7 +326,7 @@ contract OldIPAssetTest is BaseTest {
         vm.deal(address(operator), fee);
         vm.prank(address(operator));
         (address pool, address tokenAddr) = ipWorld.createIpToken{value: fee}(
-            alice, "Direct Harvest Test", "DHT", OLD_IPA, startTickList, allocationList
+            alice, "Direct Harvest Test", "DHT", OLD_IPA, startTickList, allocationList, false
         );
 
         // Initial swap to setup pool
@@ -367,6 +374,8 @@ contract OldIPAssetTest is BaseTest {
         tokens[0] = makeAddr("token1");
         tokens[1] = makeAddr("token2");
 
+        address referral = makeAddr("referral1");
+
         // Create a new IP asset that we can control instead of using OLD_IPA
         // Grant MINTER_ROLE to this contract if not already granted
         bytes32 minterRole = keccak256("MINTER_ROLE");
@@ -384,12 +393,14 @@ contract OldIPAssetTest is BaseTest {
             keccak256(
                 abi.encode(
                     keccak256(
-                        "CLAIM(address sender,address ipaId,address claimer,address[] tokens,uint256 nonce,uint256 deadline)"
+                        "CLAIM(address sender,address ipaId,address claimer,address[] tokens,address referral,address treasury,uint256 nonce,uint256 deadline)"
                     ),
                     alice, // Alice is calling the function
                     testIpAsset,
                     claimer,
                     keccak256(abi.encodePacked(tokens)),
+                    referral,
+                    address(0),
                     operator.nonces(alice), // Use alice's nonce
                     block.timestamp + 1000
                 )
@@ -442,7 +453,7 @@ contract OldIPAssetTest is BaseTest {
 
         // Call from alice (not the IP owner), using both signatures
         vm.prank(alice);
-        operator.claimIpWithSig(testIpAsset, claimer, tokens, block.timestamp + 1000, sig, ipOwnerSig);
+        operator.claimIpWithSig(testIpAsset, claimer, tokens, referral, address(0), block.timestamp + 1000, sig, ipOwnerSig);
 
         // Verify the tokens are linked to the IP
         (address linkedIpaId,) = ipWorld.tokenInfo(tokens[0]);
@@ -459,18 +470,22 @@ contract OldIPAssetTest is BaseTest {
         address[] memory tokens = new address[](1);
         tokens[0] = makeAddr("token1");
 
+        address referral = makeAddr("referral1");
+
         // Create signature even though it will fail due to invalid claimer
         bytes32 digest = MessageHashUtils.toTypedDataHash(
             operator.DOMAIN_SEPARATOR(),
             keccak256(
                 abi.encode(
                     keccak256(
-                        "CLAIM(address sender,address ipaId,address claimer,address[] tokens,uint256 nonce,uint256 deadline)"
+                        "CLAIM(address sender,address ipaId,address claimer,address[] tokens,address referral,address treasury,uint256 nonce,uint256 deadline)"
                     ),
                     alice,
                     OLD_IPA,
                     claimer,
                     keccak256(abi.encodePacked(tokens)),
+                    referral,
+                    address(0),
                     operator.nonces(alice),
                     block.timestamp + 1000
                 )
@@ -485,7 +500,7 @@ contract OldIPAssetTest is BaseTest {
 
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(Errors.Operator_InvalidAddress.selector));
-        operator.claimIpWithSig(OLD_IPA, claimer, tokens, block.timestamp + 1000, sig, dummyIpOwnerSig);
+        operator.claimIpWithSig(OLD_IPA, claimer, tokens, referral, address(0), block.timestamp + 1000, sig, dummyIpOwnerSig);
     }
 
     function test_OldIPAsset_ClaimIp_InvalidIpaId() public {
@@ -495,18 +510,22 @@ contract OldIPAssetTest is BaseTest {
         address[] memory tokens = new address[](1);
         tokens[0] = makeAddr("token1");
 
+        address referral = makeAddr("referral1");
+
         // Create signature even though it will fail due to invalid ipaId
         bytes32 digest = MessageHashUtils.toTypedDataHash(
             operator.DOMAIN_SEPARATOR(),
             keccak256(
                 abi.encode(
                     keccak256(
-                        "CLAIM(address sender,address ipaId,address claimer,address[] tokens,uint256 nonce,uint256 deadline)"
+                        "CLAIM(address sender,address ipaId,address claimer,address[] tokens,address referral,address treasury,uint256 nonce,uint256 deadline)"
                     ),
                     alice,
                     ipaId,
                     claimer,
                     keccak256(abi.encodePacked(tokens)),
+                    referral,
+                    address(0),
                     operator.nonces(alice),
                     block.timestamp + 1000
                 )
@@ -521,7 +540,7 @@ contract OldIPAssetTest is BaseTest {
 
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(Errors.Operator_InvalidAddress.selector));
-        operator.claimIpWithSig(ipaId, claimer, tokens, block.timestamp + 1000, sig, dummyIpOwnerSig);
+        operator.claimIpWithSig(ipaId, claimer, tokens, referral, address(0), block.timestamp + 1000, sig, dummyIpOwnerSig);
     }
 
     function test_OldIPAsset_ClaimIp_EmptyTokens() public {
@@ -530,18 +549,22 @@ contract OldIPAssetTest is BaseTest {
         // Empty token array
         address[] memory tokens = new address[](0);
 
+        address referral = makeAddr("referral1");
+
         // Create signature even though it may fail
         bytes32 digest = MessageHashUtils.toTypedDataHash(
             operator.DOMAIN_SEPARATOR(),
             keccak256(
                 abi.encode(
                     keccak256(
-                        "CLAIM(address sender,address ipaId,address claimer,address[] tokens,uint256 nonce,uint256 deadline)"
+                        "CLAIM(address sender,address ipaId,address claimer,address[] tokens,address referral,address treasury,uint256 nonce,uint256 deadline)"
                     ),
                     alice,
                     OLD_IPA,
                     claimer,
                     keccak256(abi.encodePacked(tokens)),
+                    referral,
+                    address(0),
                     operator.nonces(alice),
                     block.timestamp + 1000
                 )
@@ -557,6 +580,6 @@ contract OldIPAssetTest is BaseTest {
         // This should still work, just claiming IP without linking tokens
         vm.prank(alice);
         vm.expectRevert(); // Expecting revert from Story Protocol integration
-        operator.claimIpWithSig(OLD_IPA, claimer, tokens, block.timestamp + 1000, sig, emptyIpOwnerSig);
+        operator.claimIpWithSig(OLD_IPA, claimer, tokens, referral, address(0), block.timestamp + 1000, sig, emptyIpOwnerSig);
     }
 }

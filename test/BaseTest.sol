@@ -96,9 +96,9 @@ contract BaseTest is Test {
                             address(tokenDeployer),
                             address(ownerVault),
                             treasury,
-                            500_000,
                             300_000,
-                            500_000,
+                            200_000,
+                            100_000,
                             500 ether,
                             Constants.CREATION_FEE
                         )

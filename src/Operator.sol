@@ -49,7 +49,7 @@ contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IER
 
     /// @notice Authorizes verification of preregistered IP registrations
     bytes32 internal constant REGISTER_IP_CLAIM_TOKENS_TYPEHASH = keccak256(
-        "REGISTER(address creator,bytes32 ipaHash,address claimer,address[] tokens,uint256 nonce,uint256 deadline)"
+        "REGISTER(address creator,bytes32 ipaHash,address claimer,address[] tokens,address referral,address treasury,uint256 nonce,uint256 deadline)"
     );
 
     /// @notice Authorizes linking of tokens to a verified or claimed IP
@@ -58,7 +58,7 @@ contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IER
 
     /// @notice Authorizes claiming IP assets with token linking
     bytes32 internal constant CLAIM_IP_TYPEHASH = keccak256(
-        "CLAIM(address sender,address ipaId,address claimer,address[] tokens,uint256 nonce,uint256 deadline)"
+        "CLAIM(address sender,address ipaId,address claimer,address[] tokens,address referral,address treasury,uint256 nonce,uint256 deadline)"
     );
 
     /// @notice Fee value for LP pools (1% fee tier)
@@ -177,8 +177,9 @@ contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IER
         );
 
         uint256 _creationFee = ipWorld.creationFee();
-        (pool, token) =
-            ipWorld.createIpToken{value: _creationFee}(msg.sender, name, symbol, ipaId, startTickList, allocationList, antiSnipe);
+        (pool, token) = ipWorld.createIpToken{value: _creationFee}(
+            msg.sender, name, symbol, ipaId, startTickList, allocationList, antiSnipe
+        );
 
         if (msg.value > _creationFee) {
             // @dev msg.value can't be greater than type(int256).max
@@ -201,6 +202,8 @@ contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IER
         WorkflowStructs.IPMetadata calldata ipMetadata,
         address claimer,
         address[] memory tokens,
+        address referral,
+        address treasury,
         uint256 deadline,
         Signature memory signature
     ) external returns (address) {
@@ -252,6 +255,8 @@ contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IER
                     hash,
                     claimer,
                     keccak256(abi.encodePacked(tokens)),
+                    referral,
+                    treasury,
                     _useNonce(msg.sender),
                     deadline
                 )
@@ -278,7 +283,10 @@ contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IER
             );
 
         ipWorld.linkTokensToIp(ipaId, tokens);
-        ipWorld.claimIp(ipaId, claimer);
+        ipWorld.claimIp(ipaId, claimer, referral);
+        if (treasury != address(0)) {
+            ipWorld.setIpTreasury(ipaId, treasury);
+        }
 
         //Transfer the IPA to the IP Owner
         ISPGNFT(spgNft).safeTransferFrom(address(this), msg.sender, tokenId);
@@ -295,7 +303,16 @@ contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IER
         }
 
         _checkSigner(
-            keccak256(abi.encode(LINK_TOKEN_TYPEHASH, msg.sender, ipaId, tokens, _useNonce(msg.sender), deadline)),
+            keccak256(
+                abi.encode(
+                    LINK_TOKEN_TYPEHASH,
+                    msg.sender,
+                    ipaId,
+                    keccak256(abi.encodePacked(tokens)),
+                    _useNonce(msg.sender),
+                    deadline
+                )
+            ),
             signature
         );
 
@@ -307,6 +324,7 @@ contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IER
     /// @param ipaId Address of the existing IP asset
     /// @param claimer Address to claim the IP asset for
     /// @param tokens Array of token addresses to link to the IP asset
+    /// @param referral Referral address for the IP asset
     /// @param deadline Signature expiration timestamp
     /// @param operatorSignature EIP712 signature for Operator verification (expectedSigner)
     /// @param ipOwnerSignature EIP712 signature for IP licensing permissions (IP owner)
@@ -314,6 +332,8 @@ contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IER
         address ipaId,
         address claimer,
         address[] calldata tokens,
+        address referral,
+        address treasury,
         uint256 deadline,
         Signature memory operatorSignature,
         Signature memory ipOwnerSignature
@@ -333,6 +353,8 @@ contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IER
                 ipaId,
                 claimer,
                 keccak256(abi.encodePacked(tokens)),
+                referral,
+                treasury,
                 _useNonce(msg.sender),
                 deadline
             )
@@ -463,7 +485,10 @@ contract Operator is IStoryHuntV3SwapCallback, EIP712, Nonces, Ownable2Step, IER
 
         // Link tokens to IP and claim
         ipWorld.linkTokensToIp(ipaId, tokens);
-        ipWorld.claimIp(ipaId, claimer);
+        ipWorld.claimIp(ipaId, claimer, referral);
+        if (treasury != address(0)) {
+            ipWorld.setIpTreasury(ipaId, treasury);
+        }
     }
 
     function _checkSigner(bytes32 structHash, Signature memory sig) internal view {

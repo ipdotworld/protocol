@@ -5,6 +5,7 @@ node_modules/
 out/
 broadcast/
 lib/
+!src/lib/
 
 # Docs
 docs/
