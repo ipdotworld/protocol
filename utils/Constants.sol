@@ -85,7 +85,7 @@ library Constants {
     uint24 public constant AIRDROP_SHARE = 125_000;
     uint24 public constant IP_OWNER_SHARE = 125_000;
     uint24 public constant BUYBACK_SHARE = 250_000;
-    uint24 public constant REFERRAL_SHARE = 50_000;
+    uint24 public constant REFERRAL_SHARE = 25_000;
     uint256 public constant BID_WALL_AMOUNT = 20 ether;
     uint64 public constant VESTING_DURATION = 180 days;
     uint256 public constant CREATION_FEE = 10 ether;
