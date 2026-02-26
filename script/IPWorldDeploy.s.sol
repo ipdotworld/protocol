@@ -56,11 +56,12 @@ contract IPWorldDeploy is Script {
                 tokenDeployer,
                 ownerVault,
                 Constants.TREASURY,
-                Constants.BURN_SHARE,
+                Constants.AIRDROP_SHARE,
                 Constants.IP_OWNER_SHARE,
                 Constants.BUYBACK_SHARE,
                 Constants.BID_WALL_AMOUNT,
-                Constants.CREATION_FEE
+                Constants.CREATION_FEE,
+                Constants.REFERRAL_SHARE
             )
         );
         ipWorld = address(new ERC1967Proxy(ipWorldImpl, abi.encodeWithSelector(IPWorld.initialize.selector, deployer)));

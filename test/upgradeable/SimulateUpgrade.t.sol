@@ -88,7 +88,8 @@ contract SimulateUpgradeTest is Test {
                 Constants.IP_OWNER_SHARE,
                 Constants.BUYBACK_SHARE,
                 Constants.BID_WALL_AMOUNT,
-                NEW_CREATION_FEE
+                NEW_CREATION_FEE,
+                Constants.REFERRAL_SHARE
             )
         );
         console2.log("New IPWorld implementation:", newImpl);

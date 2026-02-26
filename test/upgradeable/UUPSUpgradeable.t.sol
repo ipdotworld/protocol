@@ -29,7 +29,8 @@ contract UUPSUpgradeableTest is Test {
                 200_000,
                 100_000,
                 500 ether,
-                0.01 ether
+                0.01 ether,
+                50_000
             )
         );
         address owner = address(0x08);

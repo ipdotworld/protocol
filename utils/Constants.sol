@@ -66,7 +66,11 @@ library Constants {
     address public constant IPWORLD_AENEID =
         0x77475A8ca1AfE6a6dc9E82B32210709054937099;
     address public constant IPOWNER_VAULT_AENEID =
-        0x18C59E44B72A4B76FA3eE144F5E4f4fC177c1086;
+        0x276679F9e03d2E99350d407f964b5b42A3f01c73;
+    address public constant ROYALTY_POLICY_AENEID =
+        0x4dC72866e5f7e688473BB2088c5Ccddb7E176A69;
+    address public constant EXPECTED_SIGNER_AENEID =
+        0x21a75A970a35967e990C817998373C60268a9eA6;
 
     // Example old token for testing
     address public constant SONA_TOKEN =
@@ -78,9 +82,10 @@ library Constants {
         0x527b390cD37643F10dA8B8Dca980FA46EEe2f58b;
 
     // IPWorld deployment parameters
-    uint24 public constant BURN_SHARE = 500_000;
-    uint24 public constant IP_OWNER_SHARE = 200_000;
-    uint24 public constant BUYBACK_SHARE = 600_000;
+    uint24 public constant AIRDROP_SHARE = 125_000;
+    uint24 public constant IP_OWNER_SHARE = 125_000;
+    uint24 public constant BUYBACK_SHARE = 250_000;
+    uint24 public constant REFERRAL_SHARE = 50_000;
     uint256 public constant BID_WALL_AMOUNT = 20 ether;
     uint64 public constant VESTING_DURATION = 180 days;
     uint256 public constant CREATION_FEE = 10 ether;

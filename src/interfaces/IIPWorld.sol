@@ -70,14 +70,12 @@ interface IIPWorld {
     /// @param pendingRecipient Address of the pending recipient
     event RecipientPending(address indexed ipaId, address indexed currentRecipient, address indexed pendingRecipient);
 
-    /// @notice Emitted when fees are harvested (legacy format for Goldsky compatibility)
-    event Harvest(
+    /// @notice Emitted when referral fee is paid during harvest
+    event ReferralFeePaid(
         address indexed token,
-        uint256 wethCollected,
-        uint256 tokensCollected,
-        uint256 tokensBurned,
-        uint256 wethToBuyback,
-        uint256 wethToIpOwner
+        address indexed ipaId,
+        address indexed referrer,
+        uint256 amount
     );
 
     /// @notice Emitted when fees are harvested with detailed distribution
@@ -158,6 +156,10 @@ interface IIPWorld {
     /// @notice Fee required to create an IP token
     /// @return Amount of ETH required as creation fee
     function creationFee() external view returns (uint256);
+
+    /// @notice Share of LP fees designated as referral fee
+    /// @return Percentage share of fees allocated to referrals (out of PRECISION)
+    function referralShare() external view returns (uint24);
 
     /// @notice Checks if an address is an operator
     /// @param operator Address to check

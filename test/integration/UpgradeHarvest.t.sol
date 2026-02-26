@@ -51,7 +51,8 @@ contract UpgradeHarvestTest is Test {
                 Constants.IP_OWNER_SHARE,
                 Constants.BUYBACK_SHARE,
                 Constants.BID_WALL_AMOUNT,
-                Constants.CREATION_FEE
+                Constants.CREATION_FEE,
+                Constants.REFERRAL_SHARE
             )
         );
 

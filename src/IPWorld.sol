@@ -92,6 +92,9 @@ contract IPWorld is
     /// @notice Fee required to create an IP token, transferred to treasury
     uint256 public immutable creationFee;
 
+    /// @notice Share of LP fees designated as referral fee
+    uint24 public immutable referralShare;
+
     mapping(address operator => bool) public isOperator;
 
     /// @notice Stores token information including IP asset linkage and tick configurations
@@ -133,6 +136,7 @@ contract IPWorld is
     /// @param bidWallAmount_ Fixed amount of ETH allocated for each token's bid wall
     /// @param tokenDeployer_ Address of the IP token deployer contract
     /// @param creationFee_ Fee required to create an IP token
+    /// @param referralShare_ Percentage of fees allocated to referrals (out of 1,000,000)
     constructor(
         address weth_,
         address v3Deployer_,
@@ -144,7 +148,8 @@ contract IPWorld is
         uint24 ipOwnerShare_,
         uint24 buybackShare_,
         uint256 bidWallAmount_,
-        uint256 creationFee_
+        uint256 creationFee_,
+        uint24 referralShare_
     ) {
         if (
             weth_ == address(0) ||
@@ -156,7 +161,7 @@ contract IPWorld is
         ) {
             revert Errors.IPWorld_InvalidAddress();
         }
-        if (ipOwnerShare_ + buybackShare_ + airdropShare_ > PRECISION) {
+        if (ipOwnerShare_ + buybackShare_ + airdropShare_ + referralShare_ > PRECISION) {
             revert Errors.IPWorld_InvalidShare();
         }
         _weth = weth_;
@@ -170,6 +175,7 @@ contract IPWorld is
         buybackShare = buybackShare_;
         bidWallAmount = bidWallAmount_;
         creationFee = creationFee_;
+        referralShare = referralShare_;
         _disableInitializers();
     }
 
@@ -498,6 +504,7 @@ contract IPWorld is
         /// @dev Distribute token fees: airdrop pool + ipTreasury (or pendingTreasury)
         uint256 tokenTreasuryAmount;
         uint256 tokenAirdropAmount;
+        uint256 emitTokenTreasuryAmount;
         if (tokenAmount > 0) {
             tokenAirdropAmount = (tokenAmount * airdropShare) / PRECISION;
             tokenTreasuryAmount = tokenAmount - tokenAirdropAmount;
@@ -505,6 +512,7 @@ contract IPWorld is
             // Handle treasury distribution based on ipTreasury (per-IPA)
             address ipTreasury_ = ipTreasury[ipaId];
             if (ipTreasury_ != address(0)) {
+                emitTokenTreasuryAmount = tokenTreasuryAmount;
                 uint256 pending = pendingTreasury[token];
                 uint256 totalTreasuryAmount = tokenTreasuryAmount + pending;
                 if (pending > 0) pendingTreasury[token] = 0;
@@ -512,6 +520,7 @@ contract IPWorld is
                 if (pending > 0)
                     emit TreasuryFlushed(token, ipTreasury_, pending);
             } else {
+                emitTokenTreasuryAmount = 0;
                 pendingTreasury[token] += tokenTreasuryAmount;
             }
             // tokenAirdropAmount stays in contract (no tracking needed)
@@ -542,10 +551,19 @@ contract IPWorld is
                 buybackAmount = (wethAmount * buybackShare) / PRECISION;
                 ipOwnerAmount = (wethAmount * ipOwnerShare) / PRECISION;
                 wethAirdropAmount = (wethAmount * airdropShare) / PRECISION;
+
+                // Referral fee distribution
+                address ref = referral[ipaId];
+                uint256 referralAmount;
+                if (ref != address(0)) {
+                    referralAmount = (wethAmount * referralShare) / PRECISION;
+                }
+
                 uint256 treasuryAmount = wethAmount -
                     buybackAmount -
                     ipOwnerAmount -
-                    wethAirdropAmount;
+                    wethAirdropAmount -
+                    referralAmount;
 
                 // Accumulate WETH airdrop (keep as WETH)
                 wethAirdropPool[token] += wethAirdropAmount;
@@ -560,7 +578,7 @@ contract IPWorld is
                     buybackAmount = 0;
                 }
 
-                uint256 wethToWithdraw = ipOwnerAmount + treasuryAmount;
+                uint256 wethToWithdraw = ipOwnerAmount + treasuryAmount + referralAmount;
                 IWETH9(_weth).withdraw(wethToWithdraw);
 
                 (bool success, ) = treasury.call{value: treasuryAmount}("");
@@ -569,24 +587,20 @@ contract IPWorld is
                 IIPOwnerVault(ownerVault).distributeOwdAmount{
                     value: ipOwnerAmount
                 }(token);
+
+                if (referralAmount > 0) {
+                    (bool success2, ) = ref.call{value: referralAmount}("");
+                    if (!success2) revert();
+                    emit ReferralFeePaid(token, ipaId, ref, referralAmount);
+                }
             }
         }
 
-        // Emit legacy event (Goldsky compatibility) - tokensBurned always 0
-        emit Harvest(
-            token,
-            wethAmount,
-            tokenAmount,
-            0,
-            buybackAmount,
-            ipOwnerAmount
-        );
-
-        // Emit new detailed event
+        // Emit detailed event
         emit HarvestDistributed(
             token,
             tokenAmount,
-            tokenTreasuryAmount,
+            emitTokenTreasuryAmount,
             tokenAirdropAmount,
             wethAmount,
             ipOwnerAmount,
