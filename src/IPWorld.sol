@@ -613,12 +613,37 @@ contract IPWorld is
     /// Token Management
     ///
 
-    function claimAirdrop(
+    enum AirdropType { UGC, Holder }
+
+    function claimAirdropUgc(
         address token,
         address[] calldata recipients,
         uint256[] calldata tokenAmounts,
         uint256[] calldata wethAmounts
     ) external onlyOperator {
+        _claimAirdrop(token, recipients, tokenAmounts, wethAmounts, AirdropType.UGC);
+    }
+
+    function claimAirdropHolder(
+        address token,
+        address[] calldata recipients,
+        uint256[] calldata tokenAmounts,
+        uint256[] calldata wethAmounts
+    ) external onlyOperator {
+        _claimAirdrop(token, recipients, tokenAmounts, wethAmounts, AirdropType.Holder);
+    }
+
+    ///
+    /// Internal
+    ///
+
+    function _claimAirdrop(
+        address token,
+        address[] calldata recipients,
+        uint256[] calldata tokenAmounts,
+        uint256[] calldata wethAmounts,
+        AirdropType airdropType
+    ) internal {
         if (token == address(0)) {
             revert Errors.IPWorld_InvalidAddress();
         }
@@ -657,18 +682,23 @@ contract IPWorld is
                 IERC20(token).transfer(recipient, tokenAmounts[i]);
             if (wethAmounts[i] > 0)
                 IERC20(_weth).transfer(recipient, wethAmounts[i]);
-            emit AirdropClaimed(
-                token,
-                recipient,
-                tokenAmounts[i],
-                wethAmounts[i]
-            );
+            if (airdropType == AirdropType.UGC) {
+                emit AirdropClaimedUgc(
+                    token,
+                    recipient,
+                    tokenAmounts[i],
+                    wethAmounts[i]
+                );
+            } else {
+                emit AirdropClaimedHolder(
+                    token,
+                    recipient,
+                    tokenAmounts[i],
+                    wethAmounts[i]
+                );
+            }
         }
     }
-
-    ///
-    /// Internal
-    ///
 
     /// @notice Adds liquidity to a Uniswap V3 position within specified tick range as one-sided range
     /// @param token Address of the IP token to add as liquidity

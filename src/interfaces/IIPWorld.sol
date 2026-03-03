@@ -102,8 +102,11 @@ interface IIPWorld {
     /// @notice Emitted when pending treasury is flushed to ipTreasury
     event TreasuryFlushed(address indexed token, address indexed treasury, uint256 amount);
 
-    /// @notice Emitted when airdrop is claimed by a recipient
-    event AirdropClaimed(address indexed token, address indexed recipient, uint256 tokenAmount, uint256 wethAmount);
+    /// @notice Emitted when UGC airdrop is claimed by a recipient
+    event AirdropClaimedUgc(address indexed token, address indexed recipient, uint256 tokenAmount, uint256 wethAmount);
+
+    /// @notice Emitted when Holder airdrop is claimed by a recipient
+    event AirdropClaimedHolder(address indexed token, address indexed recipient, uint256 tokenAmount, uint256 wethAmount);
 
     /// @notice Precision used for v3 calculations
     /// @return Precision constant used for percentage calculations
@@ -262,13 +265,26 @@ interface IIPWorld {
     /// @param token Address of the IP token to harvest fees for
     function harvest(address token) external;
 
-    /// @notice Distributes token and WETH airdrop to specified recipients
-    /// @dev Only operators can call this function. Replaces claimToken.
+    /// @notice Distributes token and WETH airdrop to UGC recipients
+    /// @dev Only operators can call this function.
     /// @param token Address of the token to distribute
     /// @param recipients Array of recipient addresses
     /// @param tokenAmounts Array of token amounts for each recipient
     /// @param wethAmounts Array of WETH amounts for each recipient
-    function claimAirdrop(
+    function claimAirdropUgc(
+        address token,
+        address[] calldata recipients,
+        uint256[] calldata tokenAmounts,
+        uint256[] calldata wethAmounts
+    ) external;
+
+    /// @notice Distributes token and WETH airdrop to Holder recipients
+    /// @dev Only operators can call this function.
+    /// @param token Address of the token to distribute
+    /// @param recipients Array of recipient addresses
+    /// @param tokenAmounts Array of token amounts for each recipient
+    /// @param wethAmounts Array of WETH amounts for each recipient
+    function claimAirdropHolder(
         address token,
         address[] calldata recipients,
         uint256[] calldata tokenAmounts,
