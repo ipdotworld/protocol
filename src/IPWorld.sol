@@ -95,7 +95,7 @@ contract IPWorld is
     /// @notice Share of LP fees designated as referral fee
     uint24 public immutable referralShare;
 
-    mapping(address operator => bool) public isOperator;
+    mapping(address operator => OperatorType) public isOperator;
 
     /// @notice Stores token information including IP asset linkage and tick configurations
     mapping(address token => TokenInfo) private _tokenInfo;
@@ -185,9 +185,10 @@ contract IPWorld is
         _transferOwnership(initialOwner);
     }
 
-    /// @notice Restricts calls to only be made through enrolled operators
-    modifier onlyOperator() {
-        if (!isOperator[msg.sender]) {
+    /// @notice Restricts calls to only be made through enrolled operators of a specific type
+    /// @param requiredType The operator type required to call the function
+    modifier onlyOperator(OperatorType requiredType) {
+        if (isOperator[msg.sender] != requiredType) {
             revert Errors.IPWorld_OperatorOnly();
         }
         _;
@@ -232,12 +233,12 @@ contract IPWorld is
         return IERC20(token).balanceOf(address(this)) - pendingTreasury[token];
     }
 
-    function setOperator(address operator, bool status) external onlyOwner {
+    function setOperator(address operator, OperatorType operatorType) external onlyOwner {
         if (operator == treasury) {
             revert Errors.IPWorld_InvalidAddress();
         }
-        isOperator[operator] = status;
-        emit SetOperator(operator, status);
+        isOperator[operator] = operatorType;
+        emit SetOperator(operator, operatorType);
     }
 
     ///
@@ -248,7 +249,7 @@ contract IPWorld is
         address ipaId,
         address recipient,
         address referral_
-    ) external onlyOperator {
+    ) external onlyOperator(OperatorType.Protocol) {
         if (ipaId == address(0) || recipient == address(0)) {
             revert Errors.IPWorld_InvalidAddress();
         }
@@ -289,7 +290,7 @@ contract IPWorld is
     function setIpTreasury(
         address ipaId,
         address treasury_
-    ) external onlyOperator {
+    ) external onlyOperator(OperatorType.Protocol) {
         if (treasury_ == address(0)) {
             revert Errors.IPWorld_InvalidIpTreasury();
         }
@@ -303,7 +304,7 @@ contract IPWorld is
     function setReferral(
         address ipaId,
         address newReferral
-    ) external onlyOperator {
+    ) external onlyOperator(OperatorType.Protocol) {
         if (newReferral == address(0)) {
             revert Errors.IPWorld_InvalidReferral();
         }
@@ -329,7 +330,7 @@ contract IPWorld is
     function linkTokensToIp(
         address ipaId,
         address[] calldata tokenList
-    ) external onlyOperator {
+    ) external onlyOperator(OperatorType.Protocol) {
         if (ipaId == address(0)) {
             revert Errors.IPWorld_InvalidAddress();
         }
@@ -355,7 +356,7 @@ contract IPWorld is
         int24[] calldata startTickList,
         uint256[] calldata allocationList,
         bool antiSnipe
-    ) external payable onlyOperator returns (address pool, address token) {
+    ) external payable onlyOperator(OperatorType.Protocol) returns (address pool, address token) {
         // CEI: Checks - Validate fee
         if (msg.value != creationFee) {
             revert Errors.IPWorld_InvalidFee();
@@ -620,7 +621,7 @@ contract IPWorld is
         address[] calldata recipients,
         uint256[] calldata tokenAmounts,
         uint256[] calldata wethAmounts
-    ) external onlyOperator {
+    ) external onlyOperator(OperatorType.Airdrop) {
         _claimAirdrop(token, recipients, tokenAmounts, wethAmounts, AirdropType.UGC);
     }
 
@@ -629,7 +630,7 @@ contract IPWorld is
         address[] calldata recipients,
         uint256[] calldata tokenAmounts,
         uint256[] calldata wethAmounts
-    ) external onlyOperator {
+    ) external onlyOperator(OperatorType.Airdrop) {
         _claimAirdrop(token, recipients, tokenAmounts, wethAmounts, AirdropType.Holder);
     }
 

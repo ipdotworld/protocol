@@ -147,7 +147,7 @@ contract BaseTest is Test {
         spgNft.grantRole(SPGNFTLib.ADMIN_ROLE, address(ipWorld));
 
         // Now BaseTest is the owner, so we can call setOperator directly
-        ipWorld.setOperator(address(operator), true);
+        ipWorld.setOperator(address(operator), IIPWorld.OperatorType.Protocol);
 
         // for deposits
         vm.deal(address(alice), 100 ether);
