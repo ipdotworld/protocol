@@ -10,6 +10,9 @@ library Errors {
     /// @notice Only liquidity pool can call this function
     error IPToken_OnlyLiquidityPool();
 
+    /// @notice Transfer exceeds anti-snipe limit
+    error IPToken_ExceedsAntiSnipeLimit();
+
     ////////////////////////////////////////////////////////////////////////////
     //                            IPWorld                                    //
     ////////////////////////////////////////////////////////////////////////////
@@ -42,6 +45,30 @@ library Errors {
     error IPWorld_NotPendingRecipient();
     /// @notice Thrown when the caller is not the current recipient
     error IPWorld_NotCurrentRecipient();
+
+    /// @notice Fee transfer to treasury failed
+    error IPWorld_FeeTransferFailed();
+
+    /// @notice Invalid fee amount
+    error IPWorld_InvalidFee();
+
+    /// @notice Migration operation failed
+    error IPWorld_MigrationFailed();
+
+    /// @notice ipTreasury already configured for this IP asset
+    error IPWorld_IpTreasuryAlreadySet();
+
+    /// @notice ipTreasury address is address(0)
+    error IPWorld_InvalidIpTreasury();
+
+    /// @notice airdrop pool balance insufficient
+    error IPWorld_InsufficientAirdropPool();
+
+    /// @notice referral address is address(0)
+    error IPWorld_InvalidReferral();
+
+    /// @notice No pending referral for this IP asset
+    error IPWorld_NoPendingReferral();
 
     ////////////////////////////////////////////////////////////////////////////
     //                              IPOwnerVault                              //

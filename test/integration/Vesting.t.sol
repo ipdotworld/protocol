@@ -20,9 +20,12 @@ contract VestingTest is BaseTest {
     }
 
     function test_Vesting_CreatedUnverified() public {
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
-        (address pool, address tokenAddr) =
-            ipWorld.createIpToken(address(this), "chill", "CHILL", address(0), startTickList, allocationList);
+        (address pool, address tokenAddr) = ipWorld.createIpToken{value: fee}(
+            address(this), "chill", "CHILL", address(0), startTickList, allocationList, false
+        );
         swap(IUniswapV3Pool(pool), 1 ether);
 
         assertApproxEqAbs(
@@ -38,11 +41,14 @@ contract VestingTest is BaseTest {
         mockNft.mint(alice, mintTokenId);
         address ipaId = ipAssetRegistry.register(block.chainid, address(mockNft), mintTokenId);
 
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.startPrank(address(operator));
-        ipWorld.claimIp(ipaId, alice);
+        ipWorld.claimIp(ipaId, alice, address(0x999));
         assertEq(ipWorld.ipaRecipient(ipaId), address(alice));
-        (address pool, address tokenAddr) =
-            ipWorld.createIpToken(address(this), "chill", "CHILL", ipaId, startTickList, allocationList);
+        (address pool, address tokenAddr) = ipWorld.createIpToken{value: fee}(
+            address(this), "chill", "CHILL", ipaId, startTickList, allocationList, false
+        );
         vm.stopPrank();
 
         swap(IUniswapV3Pool(pool), 1 ether);
@@ -94,11 +100,14 @@ contract VestingTest is BaseTest {
         mockNft.mint(alice, mintTokenId);
         address ipaId = ipAssetRegistry.register(block.chainid, address(mockNft), mintTokenId);
 
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.startPrank(address(operator));
-        ipWorld.claimIp(ipaId, alice);
+        ipWorld.claimIp(ipaId, alice, address(0x999));
         assertEq(ipWorld.ipaRecipient(ipaId), address(alice));
-        (, address tokenAddr) =
-            ipWorld.createIpToken(address(this), "chill", "CHILL", ipaId, startTickList, allocationList);
+        (, address tokenAddr) = ipWorld.createIpToken{value: fee}(
+            address(this), "chill", "CHILL", ipaId, startTickList, allocationList, false
+        );
         vm.stopPrank();
 
         // Harvest immediately without any swaps - no fees should have accrued

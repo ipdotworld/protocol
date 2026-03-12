@@ -24,7 +24,7 @@ contract IntegrationTest is BaseTest {
 
     uint256 internal signerPk = 0xa11ce;
     address internal signer = vm.addr(signerPk);
-    int24 internal startTick = -138_180;
+    int24 internal startTick = -138_200;
     uint256 internal constant PRECISION = 1_000_000;
 
     struct SwapCallbackData {
@@ -47,16 +47,18 @@ contract IntegrationTest is BaseTest {
         uint256[] memory allocationList = new uint256[](1);
         allocationList[0] = 970000;
 
+        bool antiSnipe = false;
         bytes32 digest = MessageHashUtils.toTypedDataHash(
             operator.DOMAIN_SEPARATOR(),
             keccak256(
                 abi.encode(
                     keccak256(
-                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,uint256 nonce,uint256 deadline)"
+                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,bool antiSnipe,uint256 nonce,uint256 deadline)"
                     ),
                     alice,
                     keccak256(abi.encodePacked(startTickList)),
                     keccak256(abi.encodePacked(allocationList)),
+                    antiSnipe,
                     operator.nonces(alice),
                     block.timestamp + 1000
                 )
@@ -66,8 +68,8 @@ contract IntegrationTest is BaseTest {
         Operator.Signature memory sig = Operator.Signature(v, r, s);
 
         vm.prank(alice);
-        (, address tokenAddr) = operator.createIpTokenWithSig{value: 1 ether}(
-            "chill", "CHILL", address(0), startTickList, allocationList, block.timestamp + 1000, sig
+        (, address tokenAddr) = operator.createIpTokenWithSig{value: 11 ether}(
+            "chill", "CHILL", address(0), startTickList, allocationList, antiSnipe, block.timestamp + 1000, sig
         );
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
@@ -146,8 +148,11 @@ contract IntegrationTest is BaseTest {
         allocList[0] = 750000;
         allocList[1] = 220000;
 
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
-        (, address tokenAddr) = ipWorld.createIpToken(alice, "MEME", "Meme Token", address(0), tickList, allocList);
+        (, address tokenAddr) =
+            ipWorld.createIpToken{value: fee}(alice, "MEME", "Meme Token", address(0), tickList, allocList, false);
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 
@@ -398,9 +403,12 @@ contract IntegrationTest is BaseTest {
         testAllocations[2] = 10000; // 1%
 
         // Create IP token with specified parameters
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
-        (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations);
+        (, address tokenAddr) = ipWorld.createIpToken{value: fee}(
+            alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations, false
+        );
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 
@@ -508,13 +516,11 @@ contract IntegrationTest is BaseTest {
     function getQuoteForExactOutput(IERC20Metadata token, uint256 amountOut) internal returns (uint256) {
         try quoterV2.quoteExactOutputSingle(
             IQuoterV2.QuoteExactOutputSingleParams({
-                tokenIn: address(weth),
-                tokenOut: address(token),
-                amount: amountOut,
-                fee: POOL_FEE,
-                sqrtPriceLimitX96: 0
+                tokenIn: address(weth), tokenOut: address(token), amount: amountOut, fee: POOL_FEE, sqrtPriceLimitX96: 0
             })
-        ) returns (uint256 quotedAmountIn, uint160, uint32, uint256) {
+        ) returns (
+            uint256 quotedAmountIn, uint160, uint32, uint256
+        ) {
             return quotedAmountIn;
         } catch {
             console2.log("Failed to get quote");
@@ -566,15 +572,11 @@ contract IntegrationTest is BaseTest {
                 day200k = day;
                 console2.log("\n>>> Reached 200k WETH market cap");
 
-                // Log burned tokens from 1B supply
-                uint256 totalBurned = 1_000_000_000 * 1e18 - token.totalSupply();
-                console2.log("Total tokens burned from 1B:", totalBurned / 1e18, "tokens");
-
-                // Calculate burn from bidWall: (totalBurned - ipWorldBalance) / (1 - burnShare) * burnShare
-                uint256 ipWorldBalance = token.balanceOf(address(ipWorld));
-                uint256 burnFromBidWall = (totalBurned - ipWorldBalance) * PRECISION
-                    / (PRECISION - Constants.BURN_SHARE) * Constants.BURN_SHARE / PRECISION;
-                console2.log("Burn from bidWall:", burnFromBidWall / 1e18, "tokens");
+                // Log airdrop pool accumulation
+                uint256 tokenAirdropBalance = ipWorld.tokenAirdropPool(address(token));
+                uint256 wethAirdropBalance = ipWorld.wethAirdropPool(address(token));
+                console2.log("Token airdrop pool:", tokenAirdropBalance / 1e18, "tokens");
+                console2.log("WETH airdrop pool:", wethAirdropBalance / 1e18, "WETH");
             }
 
             if (!reached2M && marketCap >= targetMC2) {
@@ -583,15 +585,11 @@ contract IntegrationTest is BaseTest {
                 day2M = day;
                 console2.log("\n>>> Reached 2M WETH market cap");
 
-                // Log burned tokens from 1B supply
-                uint256 totalBurned = 1_000_000_000 * 1e18 - token.totalSupply();
-                console2.log("Total tokens burned from 1B:", totalBurned / 1e18, "tokens");
-
-                // Calculate burn from bidWall: (totalBurned - ipWorldBalance) / (1 - burnShare) * burnShare
-                uint256 ipWorldBalance = token.balanceOf(address(ipWorld));
-                uint256 burnFromBidWall = (totalBurned - ipWorldBalance) * PRECISION
-                    / (PRECISION - Constants.BURN_SHARE) * Constants.BURN_SHARE / PRECISION;
-                console2.log("Burn from bidWall:", burnFromBidWall / 1e18, "tokens");
+                // Log airdrop pool accumulation
+                uint256 tokenAirdropBalance = ipWorld.tokenAirdropPool(address(token));
+                uint256 wethAirdropBalance = ipWorld.wethAirdropPool(address(token));
+                console2.log("Token airdrop pool:", tokenAirdropBalance / 1e18, "tokens");
+                console2.log("WETH airdrop pool:", wethAirdropBalance / 1e18, "WETH");
             }
 
             if (!reached20M && marketCap >= 20_000_000 ether) {
@@ -601,15 +599,11 @@ contract IntegrationTest is BaseTest {
                 console2.log("\n>>> Reached 20M WETH market cap");
                 console2.log("Liquidity at 20M:", liquidity20M / 1e18, "WETH");
 
-                // Log burned tokens from 1B supply
-                uint256 totalBurned = 1_000_000_000 * 1e18 - token.totalSupply();
-                console2.log("Total tokens burned from 1B:", totalBurned / 1e18, "tokens");
-
-                // Calculate burn from bidWall: (totalBurned - ipWorldBalance) / (1 - burnShare) * burnShare
-                uint256 ipWorldBalance = token.balanceOf(address(ipWorld));
-                uint256 burnFromBidWall = (totalBurned - ipWorldBalance) * PRECISION
-                    / (PRECISION - Constants.BURN_SHARE) * Constants.BURN_SHARE / PRECISION;
-                console2.log("Burn from bidWall:", burnFromBidWall / 1e18, "tokens");
+                // Log airdrop pool accumulation
+                uint256 tokenAirdropBalance = ipWorld.tokenAirdropPool(address(token));
+                uint256 wethAirdropBalance = ipWorld.wethAirdropPool(address(token));
+                console2.log("Token airdrop pool:", tokenAirdropBalance / 1e18, "tokens");
+                console2.log("WETH airdrop pool:", wethAirdropBalance / 1e18, "WETH");
                 console2.log("Days to reach 20M:", day20M);
                 console2.log("Requirement: >= 200k WETH");
                 console2.log(liquidity20M >= 200_000 ether ? "PASS" : "FAIL");
@@ -722,9 +716,12 @@ contract IntegrationTest is BaseTest {
 
     function runBacktestCore(int24[] memory testStartTicks, uint256[] memory testAllocations) internal {
         // Create IP token
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
-        (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations);
+        (, address tokenAddr) = ipWorld.createIpToken{value: fee}(
+            alice, "MEME", "Meme Token", address(0), testStartTicks, testAllocations, false
+        );
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 
@@ -881,7 +878,9 @@ contract IntegrationTest is BaseTest {
                 fee: POOL_FEE,
                 sqrtPriceLimitX96: 0
             })
-        ) returns (uint256 quotedAmountIn, uint160, uint32, uint256) {
+        ) returns (
+            uint256 quotedAmountIn, uint160, uint32, uint256
+        ) {
             // Use actual total supply instead of hardcoded 1B
             uint256 quoterMarketCap = quotedAmountIn * totalSupply / (10 ** token.decimals());
             console2.log("Market Cap:", quoterMarketCap / 1e18, "WETH");
@@ -910,7 +909,9 @@ contract IntegrationTest is BaseTest {
                 fee: POOL_FEE,
                 sqrtPriceLimitX96: 0
             })
-        ) returns (uint256 quotedAmountIn, uint160, uint32, uint256) {
+        ) returns (
+            uint256 quotedAmountIn, uint160, uint32, uint256
+        ) {
             tokenPriceInWeth = quotedAmountIn;
         } catch {
             console2.log("Failed to get token price for liquidity calculation");
@@ -1000,9 +1001,12 @@ contract IntegrationTest is BaseTest {
 
     function singleAllocation(int24[] memory testStartTicks, uint256[] memory testAllocations) external {
         // Create and test token
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
-        (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations);
+        (, address tokenAddr) = ipWorld.createIpToken{value: fee}(
+            alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations, false
+        );
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 
@@ -1072,9 +1076,12 @@ contract IntegrationTest is BaseTest {
         returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256)
     {
         // Create token
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
-        (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations);
+        (, address tokenAddr) = ipWorld.createIpToken{value: fee}(
+            alice, "MEME", "Test Token", address(0), testStartTicks, testAllocations, false
+        );
 
         IERC20Metadata token = IERC20Metadata(tokenAddr);
 
@@ -1177,7 +1184,9 @@ contract IntegrationTest is BaseTest {
                 fee: POOL_FEE,
                 sqrtPriceLimitX96: 0
             })
-        ) returns (uint256 quotedAmountIn, uint160, uint32, uint256) {
+        ) returns (
+            uint256 quotedAmountIn, uint160, uint32, uint256
+        ) {
             return quotedAmountIn * totalSupply / (10 ** token.decimals());
         } catch {
             return 0;
@@ -1197,7 +1206,9 @@ contract IntegrationTest is BaseTest {
                 fee: POOL_FEE,
                 sqrtPriceLimitX96: 0
             })
-        ) returns (uint256 tokenPriceInWeth, uint160, uint32, uint256) {
+        ) returns (
+            uint256 tokenPriceInWeth, uint160, uint32, uint256
+        ) {
             uint256 tokenValueInWeth = FullMath.mulDiv(tokenBalance, tokenPriceInWeth, 10 ** token.decimals());
             return tokenValueInWeth + wethBalance;
         } catch {
@@ -1227,10 +1238,7 @@ contract IntegrationTest is BaseTest {
         });
     }
 
-    function storyHuntV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata _data)
-        external
-        override
-    {
+    function storyHuntV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata _data) external override {
         require(amount0Delta > 0 || amount1Delta > 0); // swaps entirely within 0-liquidity regions are not supported
         SwapCallbackData memory data = abi.decode(_data, (SwapCallbackData));
         (address tokenIn, address tokenOut,) = data.path.decodeFirstPool();

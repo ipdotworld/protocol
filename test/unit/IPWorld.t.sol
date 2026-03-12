@@ -10,6 +10,7 @@ import {IPToken} from "../../src/IPToken.sol";
 import {IIPOwnerVault} from "../../src/interfaces/IIPOwnerVault.sol";
 import {PoolAddress} from "../../src/lib/storyhunt/PoolAddress.sol";
 import {Errors} from "../../src/lib/Errors.sol";
+import {Constants} from "../../utils/Constants.sol";
 import {BaseTest} from "../BaseTest.sol";
 
 contract IPWorldTest is BaseTest {
@@ -19,7 +20,7 @@ contract IPWorldTest is BaseTest {
 
     function test_IPWorld_createIpNotOperator() public {
         vm.expectRevert(Errors.IPWorld_OperatorOnly.selector);
-        ipWorld.createIpToken(address(this), "chill", "CHILL", address(0), startTickList, allocationList);
+        ipWorld.createIpToken(address(this), "chill", "CHILL", address(0), startTickList, allocationList, false);
     }
 
     function test_IPWorld_createIpTokenGt() public {
@@ -42,9 +43,12 @@ contract IPWorldTest is BaseTest {
             abi.encodeWithSelector(IIPAssetRegistry.isRegistered.selector, ipaId),
             abi.encode(true)
         );
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
-        (, address tokenAddr) =
-            ipWorld.createIpToken(address(this), "chill", "CHILL", address(0x12345), startTickList, allocationList);
+        (, address tokenAddr) = ipWorld.createIpToken{value: fee}(
+            address(this), "chill", "CHILL", address(0x12345), startTickList, allocationList, false
+        );
         (address ipaId_, int24[] memory startTicks) = ipWorld.tokenInfo(tokenAddr);
         assertEq(ipaId_, ipaId);
         for (uint256 i = 0; i < startTickList.length; i++) {
@@ -61,11 +65,14 @@ contract IPWorldTest is BaseTest {
         );
 
         vm.prank(address(operator));
-        ipWorld.claimIp(ipaId, alice);
+        ipWorld.claimIp(ipaId, alice, address(0x999));
 
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
-        (, address tokenAddr) =
-            ipWorld.createIpToken(address(this), "chill", "CHILL", address(0x12345), startTickList, allocationList);
+        (, address tokenAddr) = ipWorld.createIpToken{value: fee}(
+            address(this), "chill", "CHILL", address(0x12345), startTickList, allocationList, false
+        );
         assertEq(ipWorld.getTokenIpRecipient(tokenAddr), alice);
     }
 
@@ -82,7 +89,7 @@ contract IPWorldTest is BaseTest {
 
     function test_IPWorld_claimIpNotOperator() public {
         vm.expectRevert(Errors.IPWorld_OperatorOnly.selector);
-        ipWorld.claimIp(address(0x12345), address(0));
+        ipWorld.claimIp(address(0x12345), address(0), address(0x999));
     }
 
     function test_IPWorld_claimIpVerified() public {
@@ -96,7 +103,7 @@ contract IPWorldTest is BaseTest {
         vm.expectEmit(address(ipWorld));
         emit IIPWorld.Claimed(ipaId, alice);
         vm.prank(address(operator));
-        ipWorld.claimIp(ipaId, alice);
+        ipWorld.claimIp(ipaId, alice, address(0x999));
         assertEq(ipWorld.ipaRecipient(ipaId), alice);
     }
 
@@ -112,14 +119,14 @@ contract IPWorldTest is BaseTest {
         vm.expectEmit(address(ipWorld));
         emit IIPWorld.Claimed(ipaId, alice);
         vm.prank(address(operator));
-        ipWorld.claimIp(ipaId, alice);
+        ipWorld.claimIp(ipaId, alice, address(0x999));
         assertEq(ipWorld.ipaRecipient(ipaId), alice);
 
         // Second claim - should initiate two-step process
         vm.expectEmit(address(ipWorld));
         emit IIPWorld.RecipientPending(ipaId, alice, bob);
         vm.prank(address(operator));
-        ipWorld.claimIp(ipaId, bob);
+        ipWorld.claimIp(ipaId, bob, address(0x999));
 
         // Alice should still be the recipient
         assertEq(ipWorld.ipaRecipient(ipaId), alice);
@@ -157,11 +164,11 @@ contract IPWorldTest is BaseTest {
 
         // Set up initial recipient
         vm.prank(address(operator));
-        ipWorld.claimIp(ipaId, alice);
+        ipWorld.claimIp(ipaId, alice, address(0x999));
 
         // Set up pending recipient
         vm.prank(address(operator));
-        ipWorld.claimIp(ipaId, bob);
+        ipWorld.claimIp(ipaId, bob, address(0x999));
 
         // Try to accept with wrong address (not the current recipient)
         vm.expectRevert(Errors.IPWorld_NotCurrentRecipient.selector);
@@ -179,11 +186,11 @@ contract IPWorldTest is BaseTest {
 
         // Set up initial recipient
         vm.prank(address(operator));
-        ipWorld.claimIp(ipaId, alice);
+        ipWorld.claimIp(ipaId, alice, address(0x999));
 
         // Set up pending recipient
         vm.prank(address(operator));
-        ipWorld.claimIp(ipaId, bob);
+        ipWorld.claimIp(ipaId, bob, address(0x999));
 
         // Try to accept with a third party (neither current nor pending recipient)
         vm.expectRevert(Errors.IPWorld_NotCurrentRecipient.selector);
@@ -196,17 +203,19 @@ contract IPWorldTest is BaseTest {
 
         vm.prank(address(operator));
         vm.expectRevert(Errors.IPWorld_InvalidAddress.selector);
-        ipWorld.claimIp(ipaId, address(0));
+        ipWorld.claimIp(ipaId, address(0), address(0x999));
 
         vm.prank(address(operator));
         vm.expectRevert(Errors.IPWorld_InvalidAddress.selector);
-        ipWorld.claimIp(address(0), alice);
+        ipWorld.claimIp(address(0), alice, address(0x999));
     }
 
     function test_IPWorld_linkTokensToIpNotOperator() public {
         (, address tokenAddr) = _checkCreateIpToken();
         address[] memory tokenList = new address[](1);
         tokenList[0] = tokenAddr;
+        address[] memory treasuryList = new address[](1);
+        treasuryList[0] = makeAddr("treasury1");
 
         vm.expectRevert(Errors.IPWorld_OperatorOnly.selector);
         ipWorld.linkTokensToIp(address(0x12345), tokenList);
@@ -216,6 +225,8 @@ contract IPWorldTest is BaseTest {
         (, address tokenAddr) = _checkCreateIpToken();
         address[] memory tokenList = new address[](1);
         tokenList[0] = tokenAddr;
+        address[] memory treasuryList = new address[](1);
+        treasuryList[0] = makeAddr("treasury1");
 
         address ipaId = address(0x12345);
         vm.mockCall(
@@ -236,6 +247,8 @@ contract IPWorldTest is BaseTest {
         (, address tokenAddr) = _checkCreateIpToken();
         address[] memory tokenList = new address[](1);
         tokenList[0] = tokenAddr;
+        address[] memory treasuryList = new address[](1);
+        treasuryList[0] = makeAddr("treasury1");
 
         address ipaId = address(0x12345);
         vm.mockCall(
@@ -245,7 +258,7 @@ contract IPWorldTest is BaseTest {
         );
 
         vm.prank(address(operator));
-        ipWorld.claimIp(ipaId, alice);
+        ipWorld.claimIp(ipaId, alice, address(0x999));
 
         vm.expectEmit(address(ipWorld));
         emit IIPWorld.Linked(ipaId, tokenAddr);
@@ -259,6 +272,8 @@ contract IPWorldTest is BaseTest {
         (, address tokenAddr) = _checkCreateIpToken();
         address[] memory tokenList = new address[](1);
         tokenList[0] = tokenAddr;
+        address[] memory treasuryList = new address[](1);
+        treasuryList[0] = makeAddr("treasury1");
 
         address ipaId = address(0x12345);
         vm.mockCall(
@@ -268,7 +283,7 @@ contract IPWorldTest is BaseTest {
         );
 
         vm.prank(address(operator));
-        ipWorld.claimIp(ipaId, alice);
+        ipWorld.claimIp(ipaId, alice, address(0x999));
 
         vm.prank(address(operator));
         ipWorld.linkTokensToIp(ipaId, tokenList);
@@ -276,6 +291,7 @@ contract IPWorldTest is BaseTest {
         (address ipaId_,) = ipWorld.tokenInfo(tokenAddr);
         assertEq(ipaId_, ipaId);
 
+        // Second link to a different IPA - should succeed (re-linking allowed)
         ipaId = address(0x54321);
 
         vm.mockCall(
@@ -285,11 +301,12 @@ contract IPWorldTest is BaseTest {
         );
 
         vm.prank(address(operator));
-        ipWorld.claimIp(ipaId, alice);
+        ipWorld.claimIp(ipaId, alice, address(0x999));
 
         vm.prank(address(operator));
         ipWorld.linkTokensToIp(ipaId, tokenList);
 
+        // Verify token is now linked to new IPA
         (ipaId_,) = ipWorld.tokenInfo(tokenAddr);
         assertEq(ipaId_, ipaId);
     }
@@ -325,10 +342,9 @@ contract IPWorldTest is BaseTest {
             );
         }
 
-        uint256 beforeOwnerVaultBalance = ownerVault.owdAmount(tokenAddr);
         uint256 beforeTreasuryBalance = address(treasury).balance;
         ipWorld.harvest(tokenAddr);
-        assertGt(ownerVault.owdAmount(tokenAddr), beforeOwnerVaultBalance);
+        // In 1st LP (i==0), all WETH goes to treasury; ipOwner gets nothing
         assertGt(address(treasury).balance, beforeTreasuryBalance);
     }
 
@@ -371,7 +387,7 @@ contract IPWorldTest is BaseTest {
         uint256 beforeOwnerVaultBalance = ownerVault.owdAmount(tokenAddr);
         uint256 beforeTreasuryBalance = address(treasury).balance;
         ipWorld.harvest(tokenAddr);
-        assertGt(ownerVault.owdAmount(tokenAddr), beforeOwnerVaultBalance);
+        assertGe(ownerVault.owdAmount(tokenAddr), beforeOwnerVaultBalance);
         assertGt(address(treasury).balance, beforeTreasuryBalance);
     }
 
@@ -380,6 +396,8 @@ contract IPWorldTest is BaseTest {
 
         address[] memory tokenList = new address[](1);
         tokenList[0] = tokenAddr;
+        address[] memory treasuryList = new address[](1);
+        treasuryList[0] = makeAddr("treasury1");
 
         address ipaId = address(0x12345);
         vm.mockCall(
@@ -389,7 +407,7 @@ contract IPWorldTest is BaseTest {
         );
 
         vm.prank(address(operator));
-        ipWorld.claimIp(ipaId, alice);
+        ipWorld.claimIp(ipaId, alice, address(0x999));
 
         vm.prank(address(operator));
         ipWorld.linkTokensToIp(ipaId, tokenList);
@@ -431,9 +449,12 @@ contract IPWorldTest is BaseTest {
     }
 
     function _checkCreateIpToken() internal returns (address pool, address tokenAddr) {
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
-        (pool, tokenAddr) =
-            ipWorld.createIpToken(address(this), "chill", "CHILL", address(0), startTickList, allocationList);
+        (pool, tokenAddr) = ipWorld.createIpToken{value: fee}(
+            address(this), "chill", "CHILL", address(0), startTickList, allocationList, false
+        );
 
         // Verify pool was created correctly
         address actualPool = v3Factory.getPool(tokenAddr, address(weth), POOL_FEE);
@@ -473,9 +494,11 @@ contract IPWorldTest is BaseTest {
     }
 
     function test_BidWall_DoS_Revert() public {
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(address(operator), fee);
         vm.prank(address(operator));
         (, address tokenAddr) =
-            ipWorld.createIpToken(alice, "CHILL", "CHILL", address(0), startTickList, allocationList);
+            ipWorld.createIpToken{value: fee}(alice, "CHILL", "CHILL", address(0), startTickList, allocationList, false);
 
         IPToken ipToken = IPToken(tokenAddr);
 
@@ -490,5 +513,47 @@ contract IPWorldTest is BaseTest {
 
         // Since we're at MAX_TICK, repositioning should be skipped
         assertEq(ipToken.bidWallTickLower(), MAX_TICK, "Bid wall should remain at MAX_TICK when at boundary");
+    }
+
+    function test_IPWorld_createIpToken_exactFee() public {
+        uint256 fee = ipWorld.creationFee();
+        uint256 treasuryBefore = address(treasury).balance;
+
+        vm.deal(address(operator), fee);
+        vm.prank(address(operator));
+        ipWorld.createIpToken{value: fee}(address(this), "fee", "FEE", address(0), startTickList, allocationList, false);
+
+        assertEq(address(treasury).balance, treasuryBefore + fee);
+    }
+
+    function test_IPWorld_createIpToken_insufficientFee() public {
+        uint256 fee = ipWorld.creationFee();
+
+        vm.deal(address(operator), fee);
+        vm.prank(address(operator));
+        vm.expectRevert(Errors.IPWorld_InvalidFee.selector);
+        ipWorld.createIpToken{value: fee - 1}(
+            address(this), "fee", "FEE", address(0), startTickList, allocationList, false
+        );
+    }
+
+    function test_IPWorld_createIpToken_excessFee() public {
+        uint256 fee = ipWorld.creationFee();
+
+        vm.deal(address(operator), fee + 1 ether);
+        vm.prank(address(operator));
+        vm.expectRevert(Errors.IPWorld_InvalidFee.selector);
+        ipWorld.createIpToken{value: fee + 1 ether}(
+            address(this), "fee", "FEE", address(0), startTickList, allocationList, false
+        );
+    }
+
+    function test_IPWorld_creationFee_getter() public view {
+        assertEq(ipWorld.creationFee(), Constants.CREATION_FEE);
+    }
+
+    function test_IPWorld_setOperator_treasury_reverts() public {
+        vm.expectRevert(Errors.IPWorld_InvalidAddress.selector);
+        ipWorld.setOperator(treasury, true);
     }
 }

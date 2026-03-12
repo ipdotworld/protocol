@@ -1,16 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {IGraphAwareRoyaltyPolicy} from "./interfaces/storyprotocol/IGraphAwareRoyaltyPolicy.sol";
 
 /// @title IPWorldRoyaltyPolicy
 /// @notice Minimal external royalty policy for Story Protocol, always returns 3% royalty, does nothing on hooks.
 /// @dev Upgradeable via UUPS, no storage, all logic offchain, for PIL commercialUse=true compliance.
-contract IPWorldRoyaltyPolicy is IGraphAwareRoyaltyPolicy, Initializable, UUPSUpgradeable {
-    /// @notice UUPS initializer
-    function initialize() public initializer {}
+contract IPWorldRoyaltyPolicy is IGraphAwareRoyaltyPolicy, Ownable2StepUpgradeable, UUPSUpgradeable {
+    /// @notice Initializes ownership for the royalty policy
+    /// @param initialOwner Address of the initial owner
+    function initialize(address initialOwner) public initializer {
+        __Ownable2Step_init();
+        _transferOwnership(initialOwner);
+    }
 
     /// @notice No-op for license minting hook
     function onLicenseMinting(address, uint32, bytes calldata) external override {}
@@ -60,6 +64,6 @@ contract IPWorldRoyaltyPolicy is IGraphAwareRoyaltyPolicy, Initializable, UUPSUp
             || interfaceId == bytes4(0xf2197fae);
     }
 
-    /// @dev UUPS upgradeability authorization (dummy: unrestricted)
-    function _authorizeUpgrade(address) internal override {}
+    /// @dev UUPS upgradeability authorization, restricted to contract owner
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }

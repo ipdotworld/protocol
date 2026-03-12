@@ -29,8 +29,8 @@ import {Constants} from "../utils/Constants.sol";
 
 /// @title Base Test Contract
 contract BaseTest is Test {
-    uint24 internal constant POOL_FEE = 3000; // 0.3%
-    int24 internal constant TICK_SPACING = 60;
+    uint24 internal constant POOL_FEE = 10000; // 1%
+    int24 internal constant TICK_SPACING = 200;
     int24 internal constant MAX_TICK = TickMath.MAX_TICK - (TickMath.MAX_TICK % TICK_SPACING);
 
     IWETH9 internal weth = IWETH9(Constants.WETH);
@@ -67,8 +67,9 @@ contract BaseTest is Test {
         vm.createSelectFork(Constants.STORY_MAINNET_RPC);
         address owner = address(this);
 
-        ipMetadataEmpty =
-            WorkflowStructs.IPMetadata({ipMetadataURI: "", ipMetadataHash: "", nftMetadataURI: "", nftMetadataHash: ""});
+        ipMetadataEmpty = WorkflowStructs.IPMetadata({
+            ipMetadataURI: "", ipMetadataHash: "", nftMetadataURI: "", nftMetadataHash: ""
+        });
 
         address expectedIpWorldAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 4);
 
@@ -95,10 +96,12 @@ contract BaseTest is Test {
                             address(tokenDeployer),
                             address(ownerVault),
                             treasury,
-                            500_000,
                             300_000,
-                            500_000,
-                            500 ether
+                            200_000,
+                            100_000,
+                            500 ether,
+                            Constants.CREATION_FEE,
+                            Constants.REFERRAL_SHARE
                         )
                     ),
                     abi.encodeWithSelector(IPWorld.initialize.selector, address(this))

@@ -41,6 +41,8 @@ contract OperatorTest is BaseTest {
         tokens[0] = makeAddr("token1");
         tokens[1] = makeAddr("token2");
 
+        address referral = makeAddr("referral1");
+
         address claimer = bob;
         uint256 deadline = block.timestamp + 1000;
 
@@ -50,12 +52,14 @@ contract OperatorTest is BaseTest {
             keccak256(
                 abi.encode(
                     keccak256(
-                        "REGISTER(address creator,bytes32 ipaHash,address claimer,address[] tokens,uint256 nonce,uint256 deadline)"
+                        "REGISTER(address creator,bytes32 ipaHash,address claimer,address[] tokens,address referral,address treasury,uint256 nonce,uint256 deadline)"
                     ),
                     alice,
                     ipMetadata.ipMetadataHash,
                     claimer,
                     keccak256(abi.encodePacked(tokens)),
+                    referral,
+                    address(0),
                     operator.nonces(alice),
                     deadline
                 )
@@ -69,7 +73,7 @@ contract OperatorTest is BaseTest {
         // But we can verify that signature validation passes (no ERC2612InvalidSigner error)
         vm.prank(alice);
         vm.expectRevert(); // Expecting revert from Story Protocol integration, not signature validation
-        operator.registerAndClaimTokenWithSig(ipMetadata, claimer, tokens, deadline, sig);
+        operator.registerAndClaimTokenWithSig(ipMetadata, claimer, tokens, referral, address(0), deadline, sig);
 
         // If we get here without ERC2612InvalidSigner error, signature validation passed
     }
@@ -91,6 +95,8 @@ contract OperatorTest is BaseTest {
         address[] memory tokens = new address[](1);
         tokens[0] = makeAddr("token1");
 
+        address referral = makeAddr("referral1");
+
         address claimer = bob;
         uint256 deadline = block.timestamp - 1; // expired deadline
 
@@ -99,12 +105,14 @@ contract OperatorTest is BaseTest {
             keccak256(
                 abi.encode(
                     keccak256(
-                        "REGISTER(address creator,bytes32 ipaHash,address claimer,address[] tokens,uint256 nonce,uint256 deadline)"
+                        "REGISTER(address creator,bytes32 ipaHash,address claimer,address[] tokens,address referral,address treasury,uint256 nonce,uint256 deadline)"
                     ),
                     alice,
                     ipMetadata.ipMetadataHash,
                     claimer,
                     keccak256(abi.encodePacked(tokens)),
+                    referral,
+                    address(0),
                     operator.nonces(alice),
                     deadline
                 )
@@ -116,7 +124,7 @@ contract OperatorTest is BaseTest {
 
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(Errors.Operator_ERC2612ExpiredSignature.selector, deadline));
-        operator.registerAndClaimTokenWithSig(ipMetadata, claimer, tokens, deadline, sig);
+        operator.registerAndClaimTokenWithSig(ipMetadata, claimer, tokens, referral, address(0), deadline, sig);
     }
 
     function test_Operator_registerAndClaimTokenWithSig_InvalidSigner() public {
@@ -136,6 +144,8 @@ contract OperatorTest is BaseTest {
         address[] memory tokens = new address[](1);
         tokens[0] = makeAddr("token1");
 
+        address referral = makeAddr("referral1");
+
         address claimer = bob;
         uint256 deadline = block.timestamp + 1000;
 
@@ -147,12 +157,14 @@ contract OperatorTest is BaseTest {
             keccak256(
                 abi.encode(
                     keccak256(
-                        "REGISTER(address creator,bytes32 ipaHash,address claimer,address[] tokens,uint256 nonce,uint256 deadline)"
+                        "REGISTER(address creator,bytes32 ipaHash,address claimer,address[] tokens,address referral,address treasury,uint256 nonce,uint256 deadline)"
                     ),
                     alice,
                     ipMetadata.ipMetadataHash,
                     claimer,
                     keccak256(abi.encodePacked(tokens)),
+                    referral,
+                    address(0),
                     operator.nonces(alice),
                     deadline
                 )
@@ -164,11 +176,12 @@ contract OperatorTest is BaseTest {
 
         vm.prank(alice);
         vm.expectRevert(); // Should revert with Operator_ERC2612InvalidSigner
-        operator.registerAndClaimTokenWithSig(ipMetadata, claimer, tokens, deadline, sig);
+        operator.registerAndClaimTokenWithSig(ipMetadata, claimer, tokens, referral, address(0), deadline, sig);
     }
 
     function test_Operator_createIpTokenWithSig_ValidSingature() public {
-        vm.deal(alice, 1 ether);
+        uint256 fee = ipWorld.creationFee();
+        vm.deal(alice, fee);
 
         // set expectedSigner to signer for test
         vm.prank(operator.owner());
@@ -179,16 +192,18 @@ contract OperatorTest is BaseTest {
         uint256[] memory allocationList = new uint256[](1);
         allocationList[0] = 970000;
 
+        bool antiSnipe = false;
         bytes32 digest = MessageHashUtils.toTypedDataHash(
             operator.DOMAIN_SEPARATOR(),
             keccak256(
                 abi.encode(
                     keccak256(
-                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,uint256 nonce,uint256 deadline)"
+                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,bool antiSnipe,uint256 nonce,uint256 deadline)"
                     ),
                     alice,
                     keccak256(abi.encodePacked(startTickList)),
                     keccak256(abi.encodePacked(allocationList)),
+                    antiSnipe,
                     operator.nonces(alice),
                     block.timestamp + 1000
                 )
@@ -201,17 +216,18 @@ contract OperatorTest is BaseTest {
         uint256 aliceBalanceBefore = alice.balance;
 
         vm.prank(alice);
-        operator.createIpTokenWithSig{value: 1 ether}(
+        operator.createIpTokenWithSig{value: fee}(
             "Test",
             "TEST",
             address(0), // ipaId
             startTickList,
             allocationList,
+            antiSnipe,
             block.timestamp + 1000,
             sig
         );
 
-        assertEq(alice.balance, aliceBalanceBefore - 1 ether);
+        assertEq(alice.balance, aliceBalanceBefore - fee);
     }
 
     function test_Operator_createIpTokenWithSig_InvalidSingature_Values() public {
@@ -226,16 +242,18 @@ contract OperatorTest is BaseTest {
         uint256[] memory allocationList = new uint256[](1);
         allocationList[0] = 970000;
 
+        bool antiSnipe = false;
         bytes32 digest = MessageHashUtils.toTypedDataHash(
             operator.DOMAIN_SEPARATOR(),
             keccak256(
                 abi.encode(
                     keccak256(
-                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,uint256 nonce,uint256 deadline)"
+                        "CREATE(address creator,int24[] startTick,uint256[] allocationList,bool antiSnipe,uint256 nonce,uint256 deadline)"
                     ),
                     address(operator),
                     keccak256(abi.encodePacked(startTickList)),
                     keccak256(abi.encodePacked(allocationList)),
+                    antiSnipe,
                     operator.nonces(alice),
                     block.timestamp + 1000
                 )
@@ -253,6 +271,7 @@ contract OperatorTest is BaseTest {
             address(0), // ipaId
             startTickList,
             allocationList,
+            antiSnipe,
             block.timestamp + 1000,
             sig
         );
