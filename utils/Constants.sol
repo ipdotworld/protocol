@@ -79,7 +79,7 @@ library Constants {
     // IPWorld deployment
     address public constant OWNER = 0xA4fBE288bAbd27dc792e811C826E855989273090;
     address public constant EXPECTED_SIGNER =
-        0x527b390cD37643F10dA8B8Dca980FA46EEe2f58b;
+        0xC0CD5e9c5fE3D38CaB8516bB4fEf6e0FE59398FD;
 
     // IPWorld deployment parameters
     uint24 public constant AIRDROP_SHARE = 100_000;
