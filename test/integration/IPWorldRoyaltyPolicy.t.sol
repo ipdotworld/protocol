@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 import "forge-std/Test.sol";
 import {IPWorldRoyaltyPolicy} from "../../src/IPWorldRoyaltyPolicy.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {RoyaltyModule} from "@storyprotocol/core/modules/royalty/RoyaltyModule.sol";
+import {IRoyaltyModule} from "@storyprotocol/core/interfaces/modules/royalty/IRoyaltyModule.sol";
 import {ILicensingModule} from "@storyprotocol/core/interfaces/modules/licensing/ILicensingModule.sol";
 import {IPILicenseTemplate, PILTerms} from "@storyprotocol/core/interfaces/modules/licensing/IPILicenseTemplate.sol";
 import {IIPAssetRegistry} from "@storyprotocol/core/interfaces/registries/IIPAssetRegistry.sol";
@@ -74,7 +74,7 @@ contract IPWorldRoyaltyPolicyTest is Test {
         IPWorldRoyaltyPolicy policy = IPWorldRoyaltyPolicy(address(proxy));
 
         // 2. Register as external royalty policy on RoyaltyModule
-        RoyaltyModule(Constants.ROYALTY_MODULE).registerExternalRoyaltyPolicy(address(policy));
+        IRoyaltyModule(Constants.ROYALTY_MODULE).registerExternalRoyaltyPolicy(address(policy));
 
         // 3. Register PIL terms with commercialUse=true and royaltyPolicy=policy
         PILTerms memory pilTerms = PILTerms({
@@ -137,7 +137,7 @@ contract IPWorldRoyaltyPolicyTest is Test {
 
         // Assert that the policy address is nonzero and registered
         assertTrue(address(policy) != address(0));
-        assertTrue(RoyaltyModule(Constants.ROYALTY_MODULE).isRegisteredExternalRoyaltyPolicy(address(policy)));
+        assertTrue(IRoyaltyModule(Constants.ROYALTY_MODULE).isRegisteredExternalRoyaltyPolicy(address(policy)));
 
         // Assert that PIL terms were registered successfully
         assertTrue(pilTermsId > 0);
