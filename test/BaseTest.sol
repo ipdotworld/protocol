@@ -101,7 +101,8 @@ contract BaseTest is Test {
                             100_000,
                             500 ether,
                             Constants.CREATION_FEE,
-                            Constants.REFERRAL_SHARE
+                            Constants.REFERRAL_SHARE,
+                            400_000
                         )
                     ),
                     abi.encodeWithSelector(IPWorld.initialize.selector, address(this))
@@ -147,7 +148,7 @@ contract BaseTest is Test {
         spgNft.grantRole(SPGNFTLib.ADMIN_ROLE, address(ipWorld));
 
         // Now BaseTest is the owner, so we can call setOperator directly
-        ipWorld.setOperator(address(operator), true);
+        ipWorld.setOperator(address(operator), IIPWorld.OperatorType.Protocol);
 
         // for deposits
         vm.deal(address(alice), 100 ether);

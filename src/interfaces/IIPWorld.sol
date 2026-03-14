@@ -2,10 +2,18 @@
 pragma solidity ^0.8.26;
 
 interface IIPWorld {
-    /// @notice Emitted when operator status is changed for an address
-    /// @param operator Address whose operator status changed
-    /// @param status True if operator status granted, false if revoked
-    event SetOperator(address indexed operator, bool status);
+    /// @notice Operator role types for access control separation
+    /// @dev None=0 (no access), Protocol=1 (core operations), Airdrop=2 (airdrop distribution)
+    enum OperatorType {
+        None,
+        Protocol,
+        Airdrop
+    }
+
+    /// @notice Emitted when operator type is changed for an address
+    /// @param operator Address whose operator type changed
+    /// @param operatorType The new operator type assigned
+    event SetOperator(address indexed operator, OperatorType operatorType);
 
     /// @notice Emitted when a new IP token is deployed
     /// @param tokenCreator Address of the token creator
@@ -71,12 +79,7 @@ interface IIPWorld {
     event RecipientPending(address indexed ipaId, address indexed currentRecipient, address indexed pendingRecipient);
 
     /// @notice Emitted when referral fee is paid during harvest
-    event ReferralFeePaid(
-        address indexed token,
-        address indexed ipaId,
-        address indexed referrer,
-        uint256 amount
-    );
+    event ReferralFeePaid(address indexed token, address indexed ipaId, address indexed referrer, uint256 amount);
 
     /// @notice Emitted when fees are harvested with detailed distribution
     event HarvestDistributed(
@@ -106,7 +109,9 @@ interface IIPWorld {
     event AirdropClaimedUgc(address indexed token, address indexed recipient, uint256 tokenAmount, uint256 wethAmount);
 
     /// @notice Emitted when Holder airdrop is claimed by a recipient
-    event AirdropClaimedHolder(address indexed token, address indexed recipient, uint256 tokenAmount, uint256 wethAmount);
+    event AirdropClaimedHolder(
+        address indexed token, address indexed recipient, uint256 tokenAmount, uint256 wethAmount
+    );
 
     /// @notice Precision used for v3 calculations
     /// @return Precision constant used for percentage calculations
@@ -140,6 +145,10 @@ interface IIPWorld {
     /// @return Percentage share of fees for airdrop (out of PRECISION)
     function airdropShare() external view returns (uint24);
 
+    /// @notice Share of token fees allocated to airdrop pool
+    /// @return Percentage share of token fees for airdrop (out of PRECISION)
+    function tokenAirdropShare() external view returns (uint24);
+
     /// @notice Gets the treasury address for an IP asset
     function ipTreasury(address ipaId) external view returns (address);
 
@@ -164,10 +173,10 @@ interface IIPWorld {
     /// @return Percentage share of fees allocated to referrals (out of PRECISION)
     function referralShare() external view returns (uint24);
 
-    /// @notice Checks if an address is an operator
+    /// @notice Gets the operator type for an address
     /// @param operator Address to check
-    /// @return True if the address is an operator, false otherwise
-    function isOperator(address operator) external view returns (bool);
+    /// @return The operator type assigned to the address
+    function isOperator(address operator) external view returns (OperatorType);
 
     /// @notice Gets token information for a deployed IP world token
     /// @param token Address of the token
@@ -190,11 +199,11 @@ interface IIPWorld {
     /// @return Address of the pending recipient or zero if none exists
     function ipaPendingRecipient(address ipaId) external view returns (address);
 
-    /// @notice Sets or removes operator status for an address
+    /// @notice Sets the operator type for an address
     /// @dev Only the contract owner can call this function
-    /// @param operator Address to set operator status for
-    /// @param status True to grant operator permissions, false to revoke
-    function setOperator(address operator, bool status) external;
+    /// @param operator Address to set operator type for
+    /// @param operatorType The operator type to assign (None to revoke, Protocol or Airdrop to grant)
+    function setOperator(address operator, OperatorType operatorType) external;
 
     /// @notice Claims an IP asset for a recipient, initiating a two-step process if already claimed
     /// @dev Only operators can call this function. If the IP asset has no recipient, sets directly.

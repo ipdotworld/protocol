@@ -554,6 +554,6 @@ contract IPWorldTest is BaseTest {
 
     function test_IPWorld_setOperator_treasury_reverts() public {
         vm.expectRevert(Errors.IPWorld_InvalidAddress.selector);
-        ipWorld.setOperator(treasury, true);
+        ipWorld.setOperator(treasury, IIPWorld.OperatorType.Protocol);
     }
 }

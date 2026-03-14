@@ -168,19 +168,16 @@ contract OldIPAssetTest is BaseTest {
         assertEq(linkedIpaId, OLD_IPA, "Token should be linked to old IPA");
     }
 
-    function test_OldIPAsset_LinkToken() public {
-        // Create a mock token to link
+    function test_OldIPAsset_LinkToken_RevertsForUnregisteredToken() public {
+        // Unregistered token should revert
         address[] memory tokens = new address[](1);
         tokens[0] = makeAddr("mockToken");
-
 
         bytes32 digest = MessageHashUtils.toTypedDataHash(
             operator.DOMAIN_SEPARATOR(),
             keccak256(
                 abi.encode(
-                    keccak256(
-                        "LINK(address sender,address ipaId,address[] tokens,uint256 nonce,uint256 deadline)"
-                    ),
+                    keccak256("LINK(address sender,address ipaId,address[] tokens,uint256 nonce,uint256 deadline)"),
                     alice,
                     OLD_IPA,
                     keccak256(abi.encodePacked(tokens)),
@@ -194,12 +191,8 @@ contract OldIPAssetTest is BaseTest {
         Operator.Signature memory sig = Operator.Signature(v, r, s);
 
         vm.prank(alice);
-        // This should succeed since operator can link tokens to IP
+        vm.expectRevert(Errors.IPWorld_WrongToken.selector);
         operator.linkTokenToIpWithSig(OLD_IPA, tokens, block.timestamp + 1000, sig);
-
-        // Verify the token was linked by checking token info
-        (address linkedIpaId,) = ipWorld.tokenInfo(tokens[0]);
-        assertEq(linkedIpaId, OLD_IPA, "Token should be linked to old IPA");
     }
 
     function test_OldIPAsset_ClaimDirect() public {
@@ -369,10 +362,8 @@ contract OldIPAssetTest is BaseTest {
     function test_OldIPAsset_ClaimIp_ValidCall() public {
         address claimer = bob;
 
-        // Create token addresses array
-        address[] memory tokens = new address[](2);
-        tokens[0] = makeAddr("token1");
-        tokens[1] = makeAddr("token2");
+        // Use empty token array since linkTokensToIp validates token registration
+        address[] memory tokens = new address[](0);
 
         address referral = makeAddr("referral1");
 
@@ -453,11 +444,9 @@ contract OldIPAssetTest is BaseTest {
 
         // Call from alice (not the IP owner), using both signatures
         vm.prank(alice);
-        operator.claimIpWithSig(testIpAsset, claimer, tokens, referral, address(0), block.timestamp + 1000, sig, ipOwnerSig);
-
-        // Verify the tokens are linked to the IP
-        (address linkedIpaId,) = ipWorld.tokenInfo(tokens[0]);
-        assertEq(linkedIpaId, testIpAsset, "Token should be linked to test IP asset");
+        operator.claimIpWithSig(
+            testIpAsset, claimer, tokens, referral, address(0), block.timestamp + 1000, sig, ipOwnerSig
+        );
 
         // Verify the claim was successful
         address recipient = ipWorld.ipaRecipient(testIpAsset);
@@ -500,7 +489,9 @@ contract OldIPAssetTest is BaseTest {
 
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(Errors.Operator_InvalidAddress.selector));
-        operator.claimIpWithSig(OLD_IPA, claimer, tokens, referral, address(0), block.timestamp + 1000, sig, dummyIpOwnerSig);
+        operator.claimIpWithSig(
+            OLD_IPA, claimer, tokens, referral, address(0), block.timestamp + 1000, sig, dummyIpOwnerSig
+        );
     }
 
     function test_OldIPAsset_ClaimIp_InvalidIpaId() public {
@@ -540,7 +531,9 @@ contract OldIPAssetTest is BaseTest {
 
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(Errors.Operator_InvalidAddress.selector));
-        operator.claimIpWithSig(ipaId, claimer, tokens, referral, address(0), block.timestamp + 1000, sig, dummyIpOwnerSig);
+        operator.claimIpWithSig(
+            ipaId, claimer, tokens, referral, address(0), block.timestamp + 1000, sig, dummyIpOwnerSig
+        );
     }
 
     function test_OldIPAsset_ClaimIp_EmptyTokens() public {
@@ -580,6 +573,8 @@ contract OldIPAssetTest is BaseTest {
         // This should still work, just claiming IP without linking tokens
         vm.prank(alice);
         vm.expectRevert(); // Expecting revert from Story Protocol integration
-        operator.claimIpWithSig(OLD_IPA, claimer, tokens, referral, address(0), block.timestamp + 1000, sig, emptyIpOwnerSig);
+        operator.claimIpWithSig(
+            OLD_IPA, claimer, tokens, referral, address(0), block.timestamp + 1000, sig, emptyIpOwnerSig
+        );
     }
 }

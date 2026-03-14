@@ -13,8 +13,9 @@ contract IPWorldRoyaltyPolicyTest is Test {
         // Deploy logic contract
         IPWorldRoyaltyPolicy logic = new IPWorldRoyaltyPolicy();
         // Deploy proxy
-        ERC1967Proxy proxy =
-            new ERC1967Proxy(address(logic), abi.encodeWithSelector(IPWorldRoyaltyPolicy.initialize.selector));
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(logic), abi.encodeWithSelector(IPWorldRoyaltyPolicy.initialize.selector, address(this))
+        );
         // Wrap as policy
         policy = IPWorldRoyaltyPolicy(address(proxy));
     }
