@@ -168,8 +168,8 @@ contract OldIPAssetTest is BaseTest {
         assertEq(linkedIpaId, OLD_IPA, "Token should be linked to old IPA");
     }
 
-    function test_OldIPAsset_LinkToken() public {
-        // Create a mock token to link
+    function test_OldIPAsset_LinkToken_RevertsForUnregisteredToken() public {
+        // Unregistered token should revert
         address[] memory tokens = new address[](1);
         tokens[0] = makeAddr("mockToken");
 
@@ -191,12 +191,8 @@ contract OldIPAssetTest is BaseTest {
         Operator.Signature memory sig = Operator.Signature(v, r, s);
 
         vm.prank(alice);
-        // This should succeed since operator can link tokens to IP
+        vm.expectRevert(Errors.IPWorld_WrongToken.selector);
         operator.linkTokenToIpWithSig(OLD_IPA, tokens, block.timestamp + 1000, sig);
-
-        // Verify the token was linked by checking token info
-        (address linkedIpaId,) = ipWorld.tokenInfo(tokens[0]);
-        assertEq(linkedIpaId, OLD_IPA, "Token should be linked to old IPA");
     }
 
     function test_OldIPAsset_ClaimDirect() public {
@@ -366,10 +362,8 @@ contract OldIPAssetTest is BaseTest {
     function test_OldIPAsset_ClaimIp_ValidCall() public {
         address claimer = bob;
 
-        // Create token addresses array
-        address[] memory tokens = new address[](2);
-        tokens[0] = makeAddr("token1");
-        tokens[1] = makeAddr("token2");
+        // Use empty token array since linkTokensToIp validates token registration
+        address[] memory tokens = new address[](0);
 
         address referral = makeAddr("referral1");
 
@@ -453,10 +447,6 @@ contract OldIPAssetTest is BaseTest {
         operator.claimIpWithSig(
             testIpAsset, claimer, tokens, referral, address(0), block.timestamp + 1000, sig, ipOwnerSig
         );
-
-        // Verify the tokens are linked to the IP
-        (address linkedIpaId,) = ipWorld.tokenInfo(tokens[0]);
-        assertEq(linkedIpaId, testIpAsset, "Token should be linked to test IP asset");
 
         // Verify the claim was successful
         address recipient = ipWorld.ipaRecipient(testIpAsset);

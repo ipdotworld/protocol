@@ -125,14 +125,12 @@ contract OperatorEnumTest is Test {
         ipWorld.setReferral(ipaId, referral_);
     }
 
-    function test_protocolOp_canCallLinkTokensToIp() public {
+    function test_protocolOp_canCallLinkTokensToIp_revertsForUnregisteredToken() public {
         address ipaId = makeAddr("ipa4");
         address[] memory tokens = new address[](1);
         tokens[0] = makeAddr("token1");
         vm.prank(protocolOp);
-        // This will not fully succeed since token1 is not a real token with info,
-        // but it should pass the onlyOperator check
-        vm.expectRevert(); // Expected revert from token info, not from operator check
+        vm.expectRevert(Errors.IPWorld_WrongToken.selector);
         ipWorld.linkTokensToIp(ipaId, tokens);
     }
 

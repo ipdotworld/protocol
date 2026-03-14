@@ -68,8 +68,9 @@ contract IPWorldRoyaltyPolicyTest is Test {
 
         // 1. Deploy upgradeable IPWorldRoyaltyPolicy
         IPWorldRoyaltyPolicy logic = new IPWorldRoyaltyPolicy();
-        ERC1967Proxy proxy =
-            new ERC1967Proxy(address(logic), abi.encodeWithSelector(IPWorldRoyaltyPolicy.initialize.selector));
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(logic), abi.encodeWithSelector(IPWorldRoyaltyPolicy.initialize.selector, testUser)
+        );
         vm.makePersistent(address(proxy));
         IPWorldRoyaltyPolicy policy = IPWorldRoyaltyPolicy(address(proxy));
 

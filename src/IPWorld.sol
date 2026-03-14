@@ -295,6 +295,10 @@ contract IPWorld is IIPWorld, IStoryHuntV3MintCallback, Ownable2StepUpgradeable,
             if (token == address(0)) {
                 revert Errors.IPWorld_InvalidAddress();
             }
+            (, int24[] memory startTicks) = _tokenInfo[token].decode();
+            if (startTicks.length == 0) {
+                revert Errors.IPWorld_WrongToken();
+            }
             _tokenInfo.updateTokenInfo(token, ipaId);
             emit Linked(ipaId, token);
         }
