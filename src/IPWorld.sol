@@ -83,6 +83,8 @@ contract IPWorld is
 
     uint24 public immutable airdropShare;
 
+    uint24 public immutable tokenAirdropShare;
+
     uint24 public immutable ipOwnerShare;
 
     uint24 public immutable buybackShare;
@@ -137,6 +139,7 @@ contract IPWorld is
     /// @param tokenDeployer_ Address of the IP token deployer contract
     /// @param creationFee_ Fee required to create an IP token
     /// @param referralShare_ Percentage of fees allocated to referrals (out of 1,000,000)
+    /// @param tokenAirdropShare_ Percentage of token fees allocated to airdrop pool (out of 1,000,000)
     constructor(
         address weth_,
         address v3Deployer_,
@@ -149,7 +152,8 @@ contract IPWorld is
         uint24 buybackShare_,
         uint256 bidWallAmount_,
         uint256 creationFee_,
-        uint24 referralShare_
+        uint24 referralShare_,
+        uint24 tokenAirdropShare_
     ) {
         if (
             weth_ == address(0) ||
@@ -164,6 +168,9 @@ contract IPWorld is
         if (ipOwnerShare_ + buybackShare_ + airdropShare_ + referralShare_ > PRECISION) {
             revert Errors.IPWorld_InvalidShare();
         }
+        if (tokenAirdropShare_ > PRECISION) {
+            revert Errors.IPWorld_InvalidShare();
+        }
         _weth = weth_;
         _v3Deployer = v3Deployer_;
         _v3Factory = IUniswapV3Factory(v3Factory_);
@@ -176,6 +183,7 @@ contract IPWorld is
         bidWallAmount = bidWallAmount_;
         creationFee = creationFee_;
         referralShare = referralShare_;
+        tokenAirdropShare = tokenAirdropShare_;
         _disableInitializers();
     }
 
@@ -507,7 +515,7 @@ contract IPWorld is
         uint256 tokenAirdropAmount;
         uint256 emitTokenTreasuryAmount;
         if (tokenAmount > 0) {
-            tokenAirdropAmount = (tokenAmount * airdropShare) / PRECISION;
+            tokenAirdropAmount = (tokenAmount * tokenAirdropShare) / PRECISION;
             tokenTreasuryAmount = tokenAmount - tokenAirdropAmount;
 
             // Handle treasury distribution based on ipTreasury (per-IPA)

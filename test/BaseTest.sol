@@ -101,7 +101,8 @@ contract BaseTest is Test {
                             100_000,
                             500 ether,
                             Constants.CREATION_FEE,
-                            Constants.REFERRAL_SHARE
+                            Constants.REFERRAL_SHARE,
+                            400_000
                         )
                     ),
                     abi.encodeWithSelector(IPWorld.initialize.selector, address(this))

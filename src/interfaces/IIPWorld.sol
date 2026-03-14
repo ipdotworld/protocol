@@ -144,6 +144,10 @@ interface IIPWorld {
     /// @return Percentage share of fees for airdrop (out of PRECISION)
     function airdropShare() external view returns (uint24);
 
+    /// @notice Share of token fees allocated to airdrop pool
+    /// @return Percentage share of token fees for airdrop (out of PRECISION)
+    function tokenAirdropShare() external view returns (uint24);
+
     /// @notice Gets the treasury address for an IP asset
     function ipTreasury(address ipaId) external view returns (address);
 

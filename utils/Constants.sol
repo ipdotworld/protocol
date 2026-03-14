@@ -82,10 +82,11 @@ library Constants {
         0x527b390cD37643F10dA8B8Dca980FA46EEe2f58b;
 
     // IPWorld deployment parameters
-    uint24 public constant AIRDROP_SHARE = 125_000;
-    uint24 public constant IP_OWNER_SHARE = 125_000;
+    uint24 public constant AIRDROP_SHARE = 100_000;
+    uint24 public constant IP_OWNER_SHARE = 100_000;
     uint24 public constant BUYBACK_SHARE = 250_000;
     uint24 public constant REFERRAL_SHARE = 25_000;
+    uint24 public constant TOKEN_AIRDROP_SHARE = 400_000;
     uint256 public constant BID_WALL_AMOUNT = 20 ether;
     uint64 public constant VESTING_DURATION = 180 days;
     uint256 public constant CREATION_FEE = 10 ether;
