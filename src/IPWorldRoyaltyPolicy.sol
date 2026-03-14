@@ -16,6 +16,13 @@ contract IPWorldRoyaltyPolicy is IGraphAwareRoyaltyPolicy, Ownable2StepUpgradeab
         _transferOwnership(initialOwner);
     }
 
+    /// @notice V2 initializer for upgrading from v1 (no-owner) to v2 (with owner)
+    /// @param newOwner Address of the contract owner
+    function initializeV2(address newOwner) public reinitializer(2) {
+        __Ownable2Step_init();
+        _transferOwnership(newOwner);
+    }
+
     /// @notice No-op for license minting hook
     function onLicenseMinting(address, uint32, bytes calldata) external override {}
 
