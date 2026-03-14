@@ -89,6 +89,9 @@ library Errors {
     /// @notice Vesting amount is zero
     error IPOwnerVault_VestingAmountZero();
 
+    /// @notice Vesting schedule not yet created
+    error IPOwnerVault_VestingNotSet();
+
     ////////////////////////////////////////////////////////////////////////////
     //                            Operator                                   //
     ////////////////////////////////////////////////////////////////////////////

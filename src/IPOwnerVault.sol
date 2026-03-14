@@ -87,6 +87,9 @@ contract IPOwnerVault is IIPOwnerVault, Ownable2StepUpgradeable, UUPSUpgradeable
         if (recipient == address(0)) {
             revert Errors.IPOwnerVault_IPAssetNotClaimed();
         }
+        if (!_vesting[token].isSet) {
+            revert Errors.IPOwnerVault_VestingNotSet();
+        }
 
         _release(token, recipient);
     }

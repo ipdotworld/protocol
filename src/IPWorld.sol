@@ -508,8 +508,10 @@ contract IPWorld is IIPWorld, IStoryHuntV3MintCallback, Ownable2StepUpgradeable,
 
                 if (referralAmount > 0) {
                     (bool success2,) = ref.call{value: referralAmount}("");
-                    if (!success2) revert();
-                    emit ReferralFeePaid(token, ipaId, ref, referralAmount);
+                    if (success2) {
+                        emit ReferralFeePaid(token, ipaId, ref, referralAmount);
+                    }
+                    // If transfer fails, ETH stays in contract for future recovery via upgrade
                 }
             }
         }

@@ -6,21 +6,18 @@ import {UUPSUpgradeable} from "@openzeppelin-upgradeable/contracts/proxy/utils/U
 import {IGraphAwareRoyaltyPolicy} from "./interfaces/storyprotocol/IGraphAwareRoyaltyPolicy.sol";
 
 /// @title IPWorldRoyaltyPolicy
-/// @notice Minimal external royalty policy for Story Protocol, always returns 3% royalty, does nothing on hooks.
+/// @notice Minimal external royalty policy for Story Protocol, always returns 15% royalty, does nothing on hooks.
 /// @dev Upgradeable via UUPS, no storage, all logic offchain, for PIL commercialUse=true compliance.
 contract IPWorldRoyaltyPolicy is IGraphAwareRoyaltyPolicy, Ownable2StepUpgradeable, UUPSUpgradeable {
+    constructor() {
+        _disableInitializers();
+    }
+
     /// @notice Initializes ownership for the royalty policy
     /// @param initialOwner Address of the initial owner
     function initialize(address initialOwner) public initializer {
         __Ownable2Step_init();
         _transferOwnership(initialOwner);
-    }
-
-    /// @notice V2 initializer for upgrading from v1 (no-owner) to v2 (with owner)
-    /// @param newOwner Address of the contract owner
-    function initializeV2(address newOwner) public reinitializer(2) {
-        __Ownable2Step_init();
-        _transferOwnership(newOwner);
     }
 
     /// @notice No-op for license minting hook
@@ -33,12 +30,12 @@ contract IPWorldRoyaltyPolicy is IGraphAwareRoyaltyPolicy, Ownable2StepUpgradeab
         override
         returns (uint32)
     {
-        return 3000;
+        return 15000;
     }
 
-    /// @notice Always returns 3% royalty for any ipId/ancestor
+    /// @notice Always returns 15% royalty for any ipId/ancestor
     function getPolicyRoyalty(address, address) external pure override returns (uint32) {
-        return 3000;
+        return 15000;
     }
 
     /// @notice Always returns 0 (no onchain transfer tracking)
@@ -51,9 +48,9 @@ contract IPWorldRoyaltyPolicy is IGraphAwareRoyaltyPolicy, Ownable2StepUpgradeab
         return 0;
     }
 
-    /// @notice Always returns 3% royalty stack
+    /// @notice Always returns 15% royalty stack
     function getPolicyRoyaltyStack(address) external pure override returns (uint32) {
-        return 3000;
+        return 15000;
     }
 
     /// @notice Always returns false (no group support)
