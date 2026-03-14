@@ -3,30 +3,16 @@ pragma solidity ^0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {
-    IERC721Receiver
-} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {
-    Ownable2StepUpgradeable
-} from "@openzeppelin-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
-import {
-    UUPSUpgradeable
-} from "@openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-import {
-    IUniswapV3Factory
-} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-import {
-    IUniswapV3Pool
-} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {TickMath} from "@uniswap/v3-core/contracts/libraries/TickMath.sol";
-import {
-    LiquidityAmounts
-} from "@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol";
+import {LiquidityAmounts} from "@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol";
 
-import {
-    IStoryHuntV3MintCallback
-} from "./interfaces/storyhunt/IStoryHuntV3MintCallback.sol";
+import {IStoryHuntV3MintCallback} from "./interfaces/storyhunt/IStoryHuntV3MintCallback.sol";
 
 import {TokenInfoLibrary, TokenInfo} from "./lib/TokenInfo.sol";
 import {IIPWorld} from "./interfaces/IIPWorld.sol";
@@ -39,13 +25,7 @@ import {Errors} from "./lib/Errors.sol";
 /// @title IPWorld
 /// @notice Main platform contract for launching IP-backed memecoins with one-sided Uniswap V3 liquidity
 /// @dev Manages token deployment, IP linking, LP management, and fee distribution. Upgradeable via UUPS.
-contract IPWorld is
-    IIPWorld,
-    IStoryHuntV3MintCallback,
-    Ownable2StepUpgradeable,
-    UUPSUpgradeable,
-    IERC721Receiver
-{
+contract IPWorld is IIPWorld, IStoryHuntV3MintCallback, Ownable2StepUpgradeable, UUPSUpgradeable, IERC721Receiver {
     using TickMath for int24;
     using TokenInfoLibrary for TokenInfo;
     using TokenInfoLibrary for mapping(address token => TokenInfo);
@@ -62,8 +42,7 @@ contract IPWorld is
     int24 private constant TICK_SPACING = 200;
 
     /// @notice Maximum valid tick for LP positions (adjusted for tick spacing)
-    int24 private constant MAX_TICK =
-        TickMath.MAX_TICK - (TickMath.MAX_TICK % TICK_SPACING);
+    int24 private constant MAX_TICK = TickMath.MAX_TICK - (TickMath.MAX_TICK % TICK_SPACING);
 
     /// @notice Address of Wrapped Ether contract for trading pairs
     address private immutable _weth;
@@ -106,8 +85,7 @@ contract IPWorld is
     mapping(address ipaId => address recipient) private _ipaRecipient;
 
     /// @notice Maps IP asset identifiers to their pending reward recipients
-    mapping(address ipaId => address pendingRecipient)
-        private _ipaPendingRecipient;
+    mapping(address ipaId => address pendingRecipient) private _ipaPendingRecipient;
 
     /// @notice Per-IPA treasury address (immutable once set)
     mapping(address ipaId => address) public ipTreasury;
@@ -156,12 +134,8 @@ contract IPWorld is
         uint24 tokenAirdropShare_
     ) {
         if (
-            weth_ == address(0) ||
-            v3Deployer_ == address(0) ||
-            v3Factory_ == address(0) ||
-            ownerVault_ == address(0) ||
-            treasury_ == address(0) ||
-            tokenDeployer_ == address(0)
+            weth_ == address(0) || v3Deployer_ == address(0) || v3Factory_ == address(0) || ownerVault_ == address(0)
+                || treasury_ == address(0) || tokenDeployer_ == address(0)
         ) {
             revert Errors.IPWorld_InvalidAddress();
         }
@@ -206,33 +180,20 @@ contract IPWorld is
     /// Getters and Setters
     ///
 
-    function tokenInfo(
-        address token
-    )
-        external
-        view
-        override
-        returns (address ipaId, int24[] memory startTicks)
-    {
+    function tokenInfo(address token) external view override returns (address ipaId, int24[] memory startTicks) {
         return _tokenInfo[token].decode();
     }
 
-    function ipaRecipient(
-        address ipaId
-    ) external view override returns (address) {
+    function ipaRecipient(address ipaId) external view override returns (address) {
         return _ipaRecipient[ipaId];
     }
 
-    function ipaPendingRecipient(
-        address ipaId
-    ) external view override returns (address) {
+    function ipaPendingRecipient(address ipaId) external view override returns (address) {
         return _ipaPendingRecipient[ipaId];
     }
 
-    function getTokenIpRecipient(
-        address token
-    ) external view returns (address) {
-        (address ipaId, ) = _tokenInfo[token].decode();
+    function getTokenIpRecipient(address token) external view returns (address) {
+        (address ipaId,) = _tokenInfo[token].decode();
         return _ipaRecipient[ipaId];
     }
 
@@ -253,11 +214,7 @@ contract IPWorld is
     /// IP Asset Management
     ///
 
-    function claimIp(
-        address ipaId,
-        address recipient,
-        address referral_
-    ) external onlyOperator(OperatorType.Protocol) {
+    function claimIp(address ipaId, address recipient, address referral_) external onlyOperator(OperatorType.Protocol) {
         if (ipaId == address(0) || recipient == address(0)) {
             revert Errors.IPWorld_InvalidAddress();
         }
@@ -295,10 +252,7 @@ contract IPWorld is
         emit Claimed(ipaId, pendingRecipient);
     }
 
-    function setIpTreasury(
-        address ipaId,
-        address treasury_
-    ) external onlyOperator(OperatorType.Protocol) {
+    function setIpTreasury(address ipaId, address treasury_) external onlyOperator(OperatorType.Protocol) {
         if (treasury_ == address(0)) {
             revert Errors.IPWorld_InvalidIpTreasury();
         }
@@ -309,10 +263,7 @@ contract IPWorld is
         emit IpTreasurySet(ipaId, treasury_);
     }
 
-    function setReferral(
-        address ipaId,
-        address newReferral
-    ) external onlyOperator(OperatorType.Protocol) {
+    function setReferral(address ipaId, address newReferral) external onlyOperator(OperatorType.Protocol) {
         if (newReferral == address(0)) {
             revert Errors.IPWorld_InvalidReferral();
         }
@@ -335,10 +286,7 @@ contract IPWorld is
         emit ReferralSet(ipaId, pendingRef);
     }
 
-    function linkTokensToIp(
-        address ipaId,
-        address[] calldata tokenList
-    ) external onlyOperator(OperatorType.Protocol) {
+    function linkTokensToIp(address ipaId, address[] calldata tokenList) external onlyOperator(OperatorType.Protocol) {
         if (ipaId == address(0)) {
             revert Errors.IPWorld_InvalidAddress();
         }
@@ -372,7 +320,7 @@ contract IPWorld is
 
         // CEI: Interactions - Transfer fee to treasury before state changes
         if (creationFee > 0) {
-            (bool success, ) = treasury.call{value: msg.value}("");
+            (bool success,) = treasury.call{value: msg.value}("");
             if (!success) revert Errors.IPWorld_FeeTransferFailed();
         }
 
@@ -380,37 +328,21 @@ contract IPWorld is
             revert Errors.IPWorld_InvalidAddress();
         }
         uint256 length = startTickList.length;
-        if (
-            length != allocationList.length ||
-            length > TokenInfoLibrary.MAX_LP ||
-            length == 0
-        ) {
+        if (length != allocationList.length || length > TokenInfoLibrary.MAX_LP || length == 0) {
             revert Errors.IPWorld_InvalidTick();
         }
 
         uint256 antiSnipeDuration = antiSnipe ? ANTI_SNIPE_DURATION : 0;
         token = _tokenDeployer.deployToken(
-            tokenCreator,
-            _v3Deployer,
-            _weth,
-            bidWallAmount,
-            antiSnipeDuration,
-            name,
-            symbol
+            tokenCreator, _v3Deployer, _weth, bidWallAmount, antiSnipeDuration, name, symbol
         );
         pool = _v3Factory.getPool(token, _weth, V3_FEE);
         if (pool == address(0)) {
             pool = _v3Factory.createPool(token, _weth, V3_FEE);
         }
-        emit TokenDeployed(
-            tokenCreator,
-            token,
-            pool,
-            startTickList,
-            allocationList
-        );
+        emit TokenDeployed(tokenCreator, token, pool, startTickList, allocationList);
 
-        (uint160 sqrtRatioX96, , , , , , ) = IUniswapV3Pool(pool).slot0();
+        (uint160 sqrtRatioX96,,,,,,) = IUniswapV3Pool(pool).slot0();
         if (sqrtRatioX96 == 0) {
             int24 initialTick = _weth < token ? MAX_TICK : -MAX_TICK;
             uint160 initialSqrtPrice = initialTick.getSqrtRatioAtTick();
@@ -425,22 +357,11 @@ contract IPWorld is
         uint256 totalSupply = IERC20(token).totalSupply();
         for (uint256 i = 1; i <= length; ++i) {
             int24 nextTick = (i == length) ? MAX_TICK : startTickList[i];
-            if (
-                startTick < TickMath.MIN_TICK ||
-                startTick >= nextTick ||
-                nextTick % TICK_SPACING != 0
-            ) {
+            if (startTick < TickMath.MIN_TICK || startTick >= nextTick || nextTick % TICK_SPACING != 0) {
                 revert Errors.IPWorld_InvalidTick();
             }
-            uint256 liquidity = (totalSupply * allocationList[i - 1]) /
-                PRECISION;
-            _addLiquidity(
-                token,
-                IUniswapV3Pool(pool),
-                liquidity,
-                startTick,
-                nextTick
-            );
+            uint256 liquidity = (totalSupply * allocationList[i - 1]) / PRECISION;
+            _addLiquidity(token, IUniswapV3Pool(pool), liquidity, startTick, nextTick);
             startTick = nextTick;
         }
 
@@ -464,17 +385,14 @@ contract IPWorld is
         if (token == address(0)) {
             revert Errors.IPWorld_InvalidAddress();
         }
-        (address ipaId, int24[] memory startTickList) = _tokenInfo[token]
-            .decode();
+        (address ipaId, int24[] memory startTickList) = _tokenInfo[token].decode();
         uint256 length = startTickList.length;
         if (length == 0) {
             revert Errors.IPWorld_WrongToken();
         }
 
         // Look up the 1% pool from factory (all tokens use 1% pool after migration)
-        IUniswapV3Pool pool = IUniswapV3Pool(
-            _v3Factory.getPool(_weth, token, V3_FEE)
-        );
+        IUniswapV3Pool pool = IUniswapV3Pool(_v3Factory.getPool(_weth, token, V3_FEE));
         if (address(pool) == address(0)) {
             revert Errors.IPWorld_WrongToken();
         }
@@ -488,7 +406,7 @@ contract IPWorld is
         }
         bool isNativeZero = _weth < token;
 
-        (, int24 currentTick, , , , , ) = pool.slot0();
+        (, int24 currentTick,,,,,) = pool.slot0();
         if (isNativeZero) currentTick = -currentTick;
 
         int24 startTick;
@@ -503,12 +421,7 @@ contract IPWorld is
         }
 
         /// @dev Collect fees from the current active liquidity position
-        (uint256 wethAmount, uint256 tokenAmount) = _collectLiquidity(
-            pool,
-            startTick,
-            nextTick,
-            isNativeZero
-        );
+        (uint256 wethAmount, uint256 tokenAmount) = _collectLiquidity(pool, startTick, nextTick, isNativeZero);
 
         /// @dev Distribute token fees: airdrop pool + ipTreasury (or pendingTreasury)
         uint256 tokenTreasuryAmount;
@@ -526,8 +439,9 @@ contract IPWorld is
                 uint256 totalTreasuryAmount = tokenTreasuryAmount + pending;
                 if (pending > 0) pendingTreasury[token] = 0;
                 IERC20(token).transfer(ipTreasury_, totalTreasuryAmount);
-                if (pending > 0)
+                if (pending > 0) {
                     emit TreasuryFlushed(token, ipTreasury_, pending);
+                }
             } else {
                 emitTokenTreasuryAmount = 0;
                 pendingTreasury[token] += tokenTreasuryAmount;
@@ -538,10 +452,7 @@ contract IPWorld is
         address recipient = _ipaRecipient[ipaId];
 
         // Create vesting schedule if recipient exists and vesting not yet set
-        if (
-            recipient != address(0) &&
-            !IIPOwnerVault(ownerVault).vesting(token).isSet
-        ) {
+        if (recipient != address(0) && !IIPOwnerVault(ownerVault).vesting(token).isSet) {
             IIPOwnerVault(ownerVault).createVestingOnTokenDeploy(token);
         }
 
@@ -553,7 +464,7 @@ contract IPWorld is
             if (i == 0) {
                 // 1st LP: 100% to protocol treasury
                 IWETH9(_weth).withdraw(wethAmount);
-                (bool success, ) = treasury.call{value: wethAmount}("");
+                (bool success,) = treasury.call{value: wethAmount}("");
                 if (!success) revert();
             } else {
                 // 2nd+ LP: all shares on full wethAmount
@@ -568,11 +479,7 @@ contract IPWorld is
                     referralAmount = (wethAmount * referralShare) / PRECISION;
                 }
 
-                uint256 treasuryAmount = wethAmount -
-                    buybackAmount -
-                    ipOwnerAmount -
-                    wethAirdropAmount -
-                    referralAmount;
+                uint256 treasuryAmount = wethAmount - buybackAmount - ipOwnerAmount - wethAirdropAmount - referralAmount;
 
                 // Accumulate WETH airdrop (keep as WETH)
                 wethAirdropPool[token] += wethAirdropAmount;
@@ -590,15 +497,13 @@ contract IPWorld is
                 uint256 wethToWithdraw = ipOwnerAmount + treasuryAmount + referralAmount;
                 IWETH9(_weth).withdraw(wethToWithdraw);
 
-                (bool success, ) = treasury.call{value: treasuryAmount}("");
+                (bool success,) = treasury.call{value: treasuryAmount}("");
                 if (!success) revert();
 
-                IIPOwnerVault(ownerVault).distributeOwdAmount{
-                    value: ipOwnerAmount
-                }(token);
+                IIPOwnerVault(ownerVault).distributeOwdAmount{value: ipOwnerAmount}(token);
 
                 if (referralAmount > 0) {
-                    (bool success2, ) = ref.call{value: referralAmount}("");
+                    (bool success2,) = ref.call{value: referralAmount}("");
                     if (!success2) revert();
                     emit ReferralFeePaid(token, ipaId, ref, referralAmount);
                 }
@@ -622,7 +527,10 @@ contract IPWorld is
     /// Token Management
     ///
 
-    enum AirdropType { UGC, Holder }
+    enum AirdropType {
+        UGC,
+        Holder
+    }
 
     function claimAirdropUgc(
         address token,
@@ -670,8 +578,7 @@ contract IPWorld is
         }
 
         // tokenAirdropPool = balance - pendingTreasury (no storage)
-        uint256 availableTokenPool = IERC20(token).balanceOf(address(this)) -
-            pendingTreasury[token];
+        uint256 availableTokenPool = IERC20(token).balanceOf(address(this)) - pendingTreasury[token];
         if (totalTokenAmount > availableTokenPool) {
             revert Errors.IPWorld_InsufficientAirdropPool();
         }
@@ -687,24 +594,16 @@ contract IPWorld is
             if (recipient == address(0)) {
                 revert Errors.IPWorld_InvalidAddress();
             }
-            if (tokenAmounts[i] > 0)
+            if (tokenAmounts[i] > 0) {
                 IERC20(token).transfer(recipient, tokenAmounts[i]);
-            if (wethAmounts[i] > 0)
+            }
+            if (wethAmounts[i] > 0) {
                 IERC20(_weth).transfer(recipient, wethAmounts[i]);
+            }
             if (airdropType == AirdropType.UGC) {
-                emit AirdropClaimedUgc(
-                    token,
-                    recipient,
-                    tokenAmounts[i],
-                    wethAmounts[i]
-                );
+                emit AirdropClaimedUgc(token, recipient, tokenAmounts[i], wethAmounts[i]);
             } else {
-                emit AirdropClaimedHolder(
-                    token,
-                    recipient,
-                    tokenAmounts[i],
-                    wethAmounts[i]
-                );
+                emit AirdropClaimedHolder(token, recipient, tokenAmounts[i], wethAmounts[i]);
             }
         }
     }
@@ -736,17 +635,9 @@ contract IPWorld is
         uint128 liquidity;
 
         if (nativeIsZero) {
-            liquidity = LiquidityAmounts.getLiquidityForAmount1(
-                lowerSqrtPriceX96,
-                upperSqrtPriceX96,
-                tokenForLiquidity
-            );
+            liquidity = LiquidityAmounts.getLiquidityForAmount1(lowerSqrtPriceX96, upperSqrtPriceX96, tokenForLiquidity);
         } else {
-            liquidity = LiquidityAmounts.getLiquidityForAmount0(
-                lowerSqrtPriceX96,
-                upperSqrtPriceX96,
-                tokenForLiquidity
-            );
+            liquidity = LiquidityAmounts.getLiquidityForAmount0(lowerSqrtPriceX96, upperSqrtPriceX96, tokenForLiquidity);
         }
         if (liquidity == 0) return;
 
@@ -754,14 +645,7 @@ contract IPWorld is
         pool.mint(address(this), tickLower, tickUpper, liquidity, data);
 
         // Emit event with original tick values (before potential swap)
-        emit LiquidityDeployed(
-            token,
-            address(pool),
-            originalTickLower,
-            originalTickUpper,
-            liquidity,
-            tokenForLiquidity
-        );
+        emit LiquidityDeployed(token, address(pool), originalTickLower, originalTickUpper, liquidity, tokenForLiquidity);
     }
 
     /// @notice Collects all liquidity and fees from a specific tick range position
@@ -771,12 +655,10 @@ contract IPWorld is
     /// @param nativeIsZero Whether WETH is token0 in the pool
     /// @return wethAmount Amount of WETH collected
     /// @return tokenAmount Amount of IP tokens collected
-    function _collectLiquidity(
-        IUniswapV3Pool pool,
-        int24 tickLower,
-        int24 tickUpper,
-        bool nativeIsZero
-    ) internal returns (uint256 wethAmount, uint256 tokenAmount) {
+    function _collectLiquidity(IUniswapV3Pool pool, int24 tickLower, int24 tickUpper, bool nativeIsZero)
+        internal
+        returns (uint256 wethAmount, uint256 tokenAmount)
+    {
         // Store original ticks for event
         int24 originalTickLower = tickLower;
         int24 originalTickUpper = tickUpper;
@@ -784,31 +666,15 @@ contract IPWorld is
         if (nativeIsZero) {
             (tickLower, tickUpper) = (-tickUpper, -tickLower);
             pool.burn(tickLower, tickUpper, 0);
-            (wethAmount, tokenAmount) = pool.collect(
-                address(this),
-                tickLower,
-                tickUpper,
-                type(uint128).max,
-                type(uint128).max
-            );
+            (wethAmount, tokenAmount) =
+                pool.collect(address(this), tickLower, tickUpper, type(uint128).max, type(uint128).max);
         } else {
             pool.burn(tickLower, tickUpper, 0);
-            (tokenAmount, wethAmount) = pool.collect(
-                address(this),
-                tickLower,
-                tickUpper,
-                type(uint128).max,
-                type(uint128).max
-            );
+            (tokenAmount, wethAmount) =
+                pool.collect(address(this), tickLower, tickUpper, type(uint128).max, type(uint128).max);
         }
 
-        emit LiquidityCollected(
-            address(pool),
-            originalTickLower,
-            originalTickUpper,
-            wethAmount,
-            tokenAmount
-        );
+        emit LiquidityCollected(address(pool), originalTickLower, originalTickUpper, wethAmount, tokenAmount);
     }
 
     ///
@@ -820,11 +686,7 @@ contract IPWorld is
     /// @param amount0Owed Amount of token0 required for liquidity transfer
     /// @param amount1Owed Amount of token1 required for liquidity transfer
     /// @param data Additional data passed by the caller
-    function storyHuntV3MintCallback(
-        uint256 amount0Owed,
-        uint256 amount1Owed,
-        bytes calldata data
-    ) external {
+    function storyHuntV3MintCallback(uint256 amount0Owed, uint256 amount1Owed, bytes calldata data) external {
         address token = abi.decode(data, (address));
 
         // Accept callback only from the 1% pool
@@ -835,30 +697,17 @@ contract IPWorld is
 
         bool nativeIsZero = _weth < token;
         if (amount0Owed > 0) {
-            IERC20(nativeIsZero ? _weth : token).transfer(
-                msg.sender,
-                amount0Owed
-            );
+            IERC20(nativeIsZero ? _weth : token).transfer(msg.sender, amount0Owed);
         }
         if (amount1Owed > 0) {
-            IERC20(nativeIsZero ? token : _weth).transfer(
-                msg.sender,
-                amount1Owed
-            );
+            IERC20(nativeIsZero ? token : _weth).transfer(msg.sender, amount1Owed);
         }
     }
 
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override onlyOwner {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /// @notice Ensures Story IPA NFTs can be received on registration
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) external pure returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 

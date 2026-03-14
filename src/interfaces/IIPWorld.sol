@@ -4,7 +4,11 @@ pragma solidity ^0.8.26;
 interface IIPWorld {
     /// @notice Operator role types for access control separation
     /// @dev None=0 (no access), Protocol=1 (core operations), Airdrop=2 (airdrop distribution)
-    enum OperatorType { None, Protocol, Airdrop }
+    enum OperatorType {
+        None,
+        Protocol,
+        Airdrop
+    }
 
     /// @notice Emitted when operator type is changed for an address
     /// @param operator Address whose operator type changed
@@ -75,12 +79,7 @@ interface IIPWorld {
     event RecipientPending(address indexed ipaId, address indexed currentRecipient, address indexed pendingRecipient);
 
     /// @notice Emitted when referral fee is paid during harvest
-    event ReferralFeePaid(
-        address indexed token,
-        address indexed ipaId,
-        address indexed referrer,
-        uint256 amount
-    );
+    event ReferralFeePaid(address indexed token, address indexed ipaId, address indexed referrer, uint256 amount);
 
     /// @notice Emitted when fees are harvested with detailed distribution
     event HarvestDistributed(
@@ -110,7 +109,9 @@ interface IIPWorld {
     event AirdropClaimedUgc(address indexed token, address indexed recipient, uint256 tokenAmount, uint256 wethAmount);
 
     /// @notice Emitted when Holder airdrop is claimed by a recipient
-    event AirdropClaimedHolder(address indexed token, address indexed recipient, uint256 tokenAmount, uint256 wethAmount);
+    event AirdropClaimedHolder(
+        address indexed token, address indexed recipient, uint256 tokenAmount, uint256 wethAmount
+    );
 
     /// @notice Precision used for v3 calculations
     /// @return Precision constant used for percentage calculations
